@@ -6,8 +6,6 @@ import {
     Container,
     TextField,
     Button,
-    Card,
-    CardContent,
     Table,
     TableBody,
     TableCell,
@@ -209,7 +207,6 @@ const ReturnPage: React.FC = () => {
     };
 
     const returnedItemsCount = formik.values.items.filter((item) => item.returned).length;
-    const allItemsReturned = formik.values.items.length > 0 && returnedItemsCount === formik.values.items.length;
 
     return (
         <Container maxWidth={false} sx={{ py: 4 }}>

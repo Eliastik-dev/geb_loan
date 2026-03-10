@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { statsApi } from '../api/client';
 
 const Dashboard: React.FC = () => {
-    const { data, isLoading, isError } = useQuery({
+    const { data, isLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const response = await statsApi.getOverview();

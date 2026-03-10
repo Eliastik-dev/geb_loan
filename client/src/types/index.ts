@@ -13,28 +13,31 @@ export interface EquipmentType {
     description?: string;
 }
 
-export enum EquipmentStatus {
-    AVAILABLE = 'AVAILABLE',
-    ON_LOAN = 'ON_LOAN',
-    MAINTENANCE = 'MAINTENANCE',
-    RETIRED = 'RETIRED',
-}
+export const EquipmentStatus = {
+    AVAILABLE: 'AVAILABLE',
+    ON_LOAN: 'ON_LOAN',
+    MAINTENANCE: 'MAINTENANCE',
+    RETIRED: 'RETIRED',
+} as const;
+export type EquipmentStatus = typeof EquipmentStatus[keyof typeof EquipmentStatus];
 
-export enum Condition {
-    NEW = 'NEW',
-    GOOD = 'GOOD',
-    SLIGHT_WEAR = 'SLIGHT_WEAR',
-    VISIBLE_WEAR = 'VISIBLE_WEAR',
-    DAMAGED = 'DAMAGED',
-    LOST = 'LOST',
-}
+export const Condition = {
+    NEW: 'NEW',
+    GOOD: 'GOOD',
+    SLIGHT_WEAR: 'SLIGHT_WEAR',
+    VISIBLE_WEAR: 'VISIBLE_WEAR',
+    DAMAGED: 'DAMAGED',
+    LOST: 'LOST',
+} as const;
+export type Condition = typeof Condition[keyof typeof Condition];
 
-export enum LoanStatus {
-    ACTIVE = 'ACTIVE',
-    RETURNED = 'RETURNED',
-    OVERDUE = 'OVERDUE',
-    CANCELLED = 'CANCELLED',
-}
+export const LoanStatus = {
+    ACTIVE: 'ACTIVE',
+    RETURNED: 'RETURNED',
+    OVERDUE: 'OVERDUE',
+    CANCELLED: 'CANCELLED',
+} as const;
+export type LoanStatus = typeof LoanStatus[keyof typeof LoanStatus];
 
 export interface Equipment {
     id: string;

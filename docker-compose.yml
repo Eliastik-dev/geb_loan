@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: geb-equipment-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: geb_equipment
+      MYSQL_USER: geb_user
+      MYSQL_PASSWORD: geb_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: geb-equipment-server
+    environment:
+      DATABASE_URL: mysql://geb_user:geb_password@db:3306/geb_equipment
+      SMTP_HOST: smtp.office365.com
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: hfannir@geb.fr
+      SMTP_PASS: ${SMTP_PASS:-}
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      APP_URL: http://localhost:5173
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npm start"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: geb-equipment-client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  mysql_data:

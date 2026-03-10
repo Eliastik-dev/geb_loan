@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  lastName      String
+  firstName     String
+  department    String?
+  hireDate      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  loans         Loan[]
+}
+
+model EquipmentType {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  createdAt   DateTime    @default(now())
+  equipment   Equipment[]
+}
+
+model Equipment {
+  id              String          @id @default(cuid())
+  serialNumber    String          @unique
+  brand           String
+  model           String
+  typeId          String
+  type            EquipmentType   @relation(fields: [typeId], references: [id])
+  currentStatus   EquipmentStatus @default(AVAILABLE)
+  condition       Condition       @default(GOOD)
+  createdAt       DateTime        @default(now())
+  loans           LoanItem[]
+}
+
+model Loan {
+  id                String     @id @default(cuid())
+  userId            String
+  user              User       @relation(fields: [userId], references: [id])
+  validationCode    String
+  checkoutDate      DateTime   @default(now())
+  returnDate        DateTime?
+  status            LoanStatus @default(ACTIVE)
+  checkoutNotes     String?
+  checkoutITStaff   String
+  returnITStaff     String?
+  items             LoanItem[]
+  checkoutValidated Boolean       @default(false)
+  returnValidated   Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  accounts          LoanAccount[]
+}
+
+model LoanAccount {
+  id            String      @id @default(cuid())
+  loanId        String
+  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  accountTypeId String
+  accountType   AccountType @relation(fields: [accountTypeId], references: [id])
+  returned      Boolean     @default(false)
+  returnNotes   String?
+  createdAt     DateTime    @default(now())
+}
+
+model AccountType {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  loans       LoanAccount[]
+}
+
+model LoanItem {
+  id           String     @id @default(cuid())
+  loanId       String
+  loan         Loan       @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  equipmentId  String
+  equipment    Equipment  @relation(fields: [equipmentId], references: [id])
+  conditionOut Condition
+  conditionIn  Condition?
+  returned     Boolean    @default(false)
+  returnNotes  String?
+  createdAt    DateTime   @default(now())
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  ON_LOAN
+  MAINTENANCE
+  RETIRED
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+  CANCELLED
+}
+
+enum Condition {
+  NEW
+  GOOD
+  SLIGHT_WEAR
+  VISIBLE_WEAR
+  DAMAGED
+  LOST
+}

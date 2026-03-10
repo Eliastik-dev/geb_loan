@@ -1,0 +1,524 @@
+import React from 'react';
+import {
+    Box,
+    Typography,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Chip,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    MenuItem,
+    List,
+    ListItem,
+    ListItemText,
+    Divider,
+} from '@mui/material';
+import {
+    Add as AddIcon,
+    Category as CategoryIcon,
+    Edit as EditIcon,
+} from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { equipmentApi } from '../api/client';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { Condition, EquipmentStatus } from '../types';
+import { conditionLabels, conditionColors } from '../components/ConditionSelector';
+
+const EquipmentInventory: React.FC = () => {
+    const [openEquipmentDialog, setOpenEquipmentDialog] = React.useState(false);
+    const [openTypeDialog, setOpenTypeDialog] = React.useState(false);
+    const [editingEquipment, setEditingEquipment] = React.useState<any>(null);
+    const queryClient = useQueryClient();
+
+    const { data: equipment = [], isLoading } = useQuery({
+        queryKey: ['equipment'],
+        queryFn: async () => {
+            const response = await equipmentApi.getAll();
+            return response.data;
+        },
+    });
+
+    const { data: types = [] } = useQuery({
+        queryKey: ['equipment-types'],
+        queryFn: async () => {
+            const response = await equipmentApi.getTypes();
+            return response.data;
+        },
+    });
+
+    const createEquipmentMutation = useMutation({
+        mutationFn: equipmentApi.create,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['equipment'] });
+            setOpenEquipmentDialog(false);
+            setEditingEquipment(null);
+            equipmentFormik.resetForm();
+        },
+    });
+
+    const updateEquipmentMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) =>
+            equipmentApi.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['equipment'] });
+            setOpenEquipmentDialog(false);
+            setEditingEquipment(null);
+            equipmentFormik.resetForm();
+        },
+    });
+
+    const createTypeMutation = useMutation({
+        mutationFn: (data: { name: string; description?: string }) =>
+            equipmentApi.createType(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['equipment-types'] });
+            typeFormik.resetForm();
+        },
+    });
+
+    const equipmentFormik = useFormik({
+        initialValues: {
+            serialNumber: '',
+            brand: '',
+            model: '',
+            typeId: '',
+            condition: Condition.GOOD,
+            currentStatus: EquipmentStatus.AVAILABLE,
+        },
+        validationSchema: Yup.object({
+            serialNumber: Yup.string().required('Numéro d\'inventaire requis'),
+            brand: Yup.string().required('Marque requise'),
+            model: Yup.string().required('Modèle requis'),
+            typeId: Yup.string().required('Type requis'),
+            condition: Yup.string().oneOf(Object.values(Condition)).required('État requis'),
+            currentStatus: Yup.string()
+                .oneOf(Object.values(EquipmentStatus))
+                .required('Statut requis'),
+        }),
+        onSubmit: (values) => {
+            if (editingEquipment) {
+                updateEquipmentMutation.mutate({ id: editingEquipment.id, data: values });
+            } else {
+                createEquipmentMutation.mutate(values);
+            }
+        },
+    });
+
+    const handleEdit = (equipment: any) => {
+        setEditingEquipment(equipment);
+        equipmentFormik.setValues({
+            serialNumber: equipment.serialNumber,
+            brand: equipment.brand,
+            model: equipment.model,
+            typeId: equipment.typeId,
+            condition: equipment.condition,
+            currentStatus: equipment.currentStatus,
+        });
+        setOpenEquipmentDialog(true);
+    };
+
+    const handleCloseDialog = () => {
+        setOpenEquipmentDialog(false);
+        setEditingEquipment(null);
+        equipmentFormik.resetForm();
+    };
+
+    const typeFormik = useFormik({
+        initialValues: {
+            name: '',
+            description: '',
+        },
+        validationSchema: Yup.object({
+            name: Yup.string().required('Nom du type requis'),
+        }),
+        onSubmit: (values) => {
+            createTypeMutation.mutate(values);
+        },
+    });
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'AVAILABLE':
+                return 'success';
+            case 'ON_LOAN':
+                return 'warning';
+            case 'MAINTENANCE':
+                return 'error';
+            case 'RETIRED':
+                return 'default';
+            default:
+                return 'default';
+        }
+    };
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'AVAILABLE':
+                return 'Disponible';
+            case 'ON_LOAN':
+                return 'En prêt';
+            case 'MAINTENANCE':
+                return 'Maintenance';
+            case 'RETIRED':
+                return 'Retiré';
+            default:
+                return status;
+        }
+    };
+
+    return (
+        <Box>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 3,
+                }}
+            >
+                <Typography variant="h4">Inventaire du matériel</Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<CategoryIcon />}
+                        onClick={() => setOpenTypeDialog(true)}
+                    >
+                        Gérer les types
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                            setEditingEquipment(null);
+                            equipmentFormik.resetForm();
+                            setOpenEquipmentDialog(true);
+                        }}
+                    >
+                        Ajouter du matériel
+                    </Button>
+                </Box>
+            </Box>
+
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Type</TableCell>
+                            <TableCell>Marque</TableCell>
+                            <TableCell>Modèle</TableCell>
+                            <TableCell>Numéro d'inventaire</TableCell>
+                            <TableCell>Statut</TableCell>
+                            <TableCell>État</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} align="center">
+                                    Chargement...
+                                </TableCell>
+                            </TableRow>
+                        ) : equipment.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} align="center">
+                                    Aucun équipement trouvé
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            equipment.map((item: any) => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.type.name}</TableCell>
+                                    <TableCell>{item.brand}</TableCell>
+                                    <TableCell>{item.model}</TableCell>
+                                    <TableCell>{item.serialNumber}</TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={getStatusLabel(item.currentStatus)}
+                                            color={getStatusColor(item.currentStatus)}
+                                            size="small"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={conditionLabels[item.condition as Condition]}
+                                            color={conditionColors[item.condition as Condition] as any}
+                                            size="small"
+                                        />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Button
+                                            size="small"
+                                            startIcon={<EditIcon />}
+                                            onClick={() => handleEdit(item)}
+                                            variant="outlined"
+                                        >
+                                            Modifier
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            {/* Equipment Dialog */}
+            <Dialog
+                open={openEquipmentDialog}
+                onClose={handleCloseDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <form onSubmit={equipmentFormik.handleSubmit}>
+                    <DialogTitle>
+                        {editingEquipment ? 'Modifier un équipement' : 'Ajouter un équipement'}
+                    </DialogTitle>
+                    <DialogContent>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                            <TextField
+                                select
+                                label="Type d'équipement"
+                                name="typeId"
+                                value={equipmentFormik.values.typeId}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                error={
+                                    equipmentFormik.touched.typeId &&
+                                    Boolean(equipmentFormik.errors.typeId)
+                                }
+                                helperText={
+                                    equipmentFormik.touched.typeId && equipmentFormik.errors.typeId
+                                }
+                                fullWidth
+                            >
+                                {types.map((type: any) => (
+                                    <MenuItem key={type.id} value={type.id}>
+                                        {type.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+
+                            <TextField
+                                label="Marque"
+                                name="brand"
+                                value={equipmentFormik.values.brand}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                error={
+                                    equipmentFormik.touched.brand &&
+                                    Boolean(equipmentFormik.errors.brand)
+                                }
+                                helperText={
+                                    equipmentFormik.touched.brand && equipmentFormik.errors.brand
+                                }
+                                fullWidth
+                            />
+
+                            <TextField
+                                label="Modèle"
+                                name="model"
+                                value={equipmentFormik.values.model}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                error={
+                                    equipmentFormik.touched.model &&
+                                    Boolean(equipmentFormik.errors.model)
+                                }
+                                helperText={
+                                    equipmentFormik.touched.model && equipmentFormik.errors.model
+                                }
+                                fullWidth
+                            />
+
+                            <TextField
+                                label="Numéro d'inventaire"
+                                name="serialNumber"
+                                value={equipmentFormik.values.serialNumber}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                error={
+                                    equipmentFormik.touched.serialNumber &&
+                                    Boolean(equipmentFormik.errors.serialNumber)
+                                }
+                                helperText={
+                                    equipmentFormik.touched.serialNumber &&
+                                    equipmentFormik.errors.serialNumber
+                                }
+                                fullWidth
+                                disabled={!!editingEquipment}
+                            />
+
+                            <TextField
+                                select
+                                label="État / Dégradation"
+                                name="condition"
+                                value={equipmentFormik.values.condition}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                error={
+                                    equipmentFormik.touched.condition &&
+                                    Boolean(equipmentFormik.errors.condition)
+                                }
+                                helperText={
+                                    equipmentFormik.touched.condition &&
+                                    equipmentFormik.errors.condition
+                                }
+                                fullWidth
+                            >
+                                <MenuItem value={Condition.NEW}>Neuf</MenuItem>
+                                <MenuItem value={Condition.GOOD}>Bon</MenuItem>
+                                <MenuItem value={Condition.SLIGHT_WEAR}>Légère usure</MenuItem>
+                                <MenuItem value={Condition.VISIBLE_WEAR}>Usure visible</MenuItem>
+                                <MenuItem value={Condition.DAMAGED}>Endommagé</MenuItem>
+                                <MenuItem value={Condition.LOST}>Perdu</MenuItem>
+                            </TextField>
+
+                            {editingEquipment && (
+                                <TextField
+                                    select
+                                    label="Statut"
+                                    name="currentStatus"
+                                    value={equipmentFormik.values.currentStatus}
+                                    onChange={equipmentFormik.handleChange}
+                                    onBlur={equipmentFormik.handleBlur}
+                                    error={
+                                        equipmentFormik.touched.currentStatus &&
+                                        Boolean(equipmentFormik.errors.currentStatus)
+                                    }
+                                    helperText={
+                                        equipmentFormik.touched.currentStatus &&
+                                        equipmentFormik.errors.currentStatus
+                                    }
+                                    fullWidth
+                                >
+                                    <MenuItem value={EquipmentStatus.AVAILABLE}>Disponible</MenuItem>
+                                    <MenuItem value={EquipmentStatus.ON_LOAN}>En prêt</MenuItem>
+                                    <MenuItem value={EquipmentStatus.MAINTENANCE}>
+                                        Maintenance
+                                    </MenuItem>
+                                    <MenuItem value={EquipmentStatus.RETIRED}>Retiré</MenuItem>
+                                </TextField>
+                            )}
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseDialog}>Annuler</Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={
+                                createEquipmentMutation.isPending ||
+                                updateEquipmentMutation.isPending
+                            }
+                        >
+                            {editingEquipment ? 'Enregistrer' : 'Ajouter'}
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+
+            {/* Equipment Type Management Dialog */}
+            <Dialog
+                open={openTypeDialog}
+                onClose={() => setOpenTypeDialog(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Gérer les types d'équipement</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                            Types existants ({types.length})
+                        </Typography>
+                        <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
+                            <List dense>
+                                {types.length === 0 ? (
+                                    <ListItem>
+                                        <ListItemText
+                                            primary="Aucun type d'équipement"
+                                            secondary="Ajoutez votre premier type ci-dessous"
+                                        />
+                                    </ListItem>
+                                ) : (
+                                    types.map((type: any) => (
+                                        <ListItem key={type.id}>
+                                            <ListItemText
+                                                primary={type.name}
+                                                secondary={type.description || 'Pas de description'}
+                                            />
+                                        </ListItem>
+                                    ))
+                                )}
+                            </List>
+                        </Paper>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Box component="form" onSubmit={typeFormik.handleSubmit}>
+                        <Typography variant="subtitle2" gutterBottom>
+                            Ajouter un nouveau type
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                            <TextField
+                                label="Nom du type"
+                                name="name"
+                                value={typeFormik.values.name}
+                                onChange={typeFormik.handleChange}
+                                onBlur={typeFormik.handleBlur}
+                                error={typeFormik.touched.name && Boolean(typeFormik.errors.name)}
+                                helperText={typeFormik.touched.name && typeFormik.errors.name}
+                                placeholder="Ex: Casque, Souris, Clavier..."
+                                fullWidth
+                            />
+
+                            <TextField
+                                label="Description (optionnelle)"
+                                name="description"
+                                value={typeFormik.values.description}
+                                onChange={typeFormik.handleChange}
+                                onBlur={typeFormik.handleBlur}
+                                placeholder="Ex: Casque audio avec micro"
+                                fullWidth
+                                multiline
+                                rows={2}
+                            />
+
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                disabled={createTypeMutation.isPending}
+                                fullWidth
+                            >
+                                Ajouter le type
+                            </Button>
+
+                            {createTypeMutation.isSuccess && (
+                                <Typography color="success.main" variant="caption">
+                                    ✓ Type ajouté avec succès!
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenTypeDialog(false)}>Fermer</Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+};
+
+export default EquipmentInventory;

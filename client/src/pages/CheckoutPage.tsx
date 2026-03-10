@@ -125,7 +125,13 @@ const validationSchema = Yup.object({
 const CheckoutPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [showAddEquipmentDialog, setShowAddEquipmentDialog] = useState(false);
-    const [newEquipmentForm, setNewEquipmentForm] = useState({
+    const [newEquipmentForm, setNewEquipmentForm] = useState<{
+        serialNumber: string;
+        brand: string;
+        model: string;
+        typeId: string;
+        condition: Condition;
+    }>({
         serialNumber: '',
         brand: '',
         model: '',
@@ -1030,7 +1036,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                 onChange={(value) =>
                                     setNewEquipmentForm({
                                         ...newEquipmentForm,
-                                        condition: value,
+                                        condition: value as Condition,
                                     })
                                 }
                                 required

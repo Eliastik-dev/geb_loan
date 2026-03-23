@@ -48,19 +48,6 @@ import { loanApi, equipmentApi, usersApi, accountTypesApi } from '../api/client'
 import { Condition } from '../types';
 import ConditionSelector from '../components/ConditionSelector';
 
-// Department options
-const DEPARTMENTS = [
-    'IT',
-    'RH',
-    'Finance',
-    'Marketing',
-    'Commercial',
-    'Direction',
-    'Production',
-    'Logistique',
-    'Autre',
-];
-
 // Brand options
 const BRANDS = [
     'Dell',
@@ -168,12 +155,12 @@ const CheckoutPage: React.FC = () => {
         },
     });
 
-    const departmentOptions = useMemo(() => {
+    const departmentOptions = useMemo<string[]>(() => {
         const userDepartments = usersData
             .map((user: any) => user.department)
             .filter((department: unknown): department is string => typeof department === 'string' && department.trim().length > 0);
 
-        return Array.from(new Set([...DEPARTMENTS, ...userDepartments]));
+        return Array.from(new Set<string>(userDepartments));
     }, [usersData]);
 
     const { data: accountTypesData = [] } = useQuery({

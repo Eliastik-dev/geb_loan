@@ -45,7 +45,7 @@ model Equipment {
 
 model Loan {
   id                String     @id @default(cuid())
-  userId            String
+  userId            Int
   user              User       @relation(fields: [userId], references: [id])
   validationCode    String
   checkoutDate      DateTime   @default(now())

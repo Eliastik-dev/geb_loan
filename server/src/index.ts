@@ -6,6 +6,7 @@ import equipmentRoutes from './routes/equipment.routes';
 import statsRoutes from './routes/stats.routes';
 import userRoutes from './routes/user.routes';
 import accountTypeRoutes from './routes/accountType.routes';
+import prisma from './lib/prisma';
 
 dotenv.config();
 
@@ -35,8 +36,25 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-});
+async function startServer() {
+    try {
+        await prisma.$connect();
+        console.log('Database connection established');
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Server is running on port ${PORT}`);
+
+            // PM2 ecosystem config uses wait_ready=true in production.
+            if (typeof process.send === 'function') {
+                process.send('ready');
+            }
+        });
+    } catch (error) {
+        console.error('Failed to start server (database connection error):', error);
+        process.exit(1);
+    }
+}
+
+void startServer();
 
 export default app;

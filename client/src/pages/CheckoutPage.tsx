@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Box,
     Typography,
@@ -167,6 +167,14 @@ const CheckoutPage: React.FC = () => {
             return response.data;
         },
     });
+
+    const departmentOptions = useMemo(() => {
+        const userDepartments = usersData
+            .map((user: any) => user.department)
+            .filter((department: unknown): department is string => typeof department === 'string' && department.trim().length > 0);
+
+        return Array.from(new Set([...DEPARTMENTS, ...userDepartments]));
+    }, [usersData]);
 
     const { data: accountTypesData = [] } = useQuery({
         queryKey: ['accountTypes'],
@@ -483,7 +491,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                             formik.errors.collaborator?.department
                                         }
                                     >
-                                        {DEPARTMENTS.map((dept) => (
+                                        {departmentOptions.map((dept) => (
                                             <MenuItem key={dept} value={dept}>
                                                 {dept}
                                             </MenuItem>

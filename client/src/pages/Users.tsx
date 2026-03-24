@@ -12,6 +12,7 @@ import * as Yup from 'yup';
 const Users: React.FC = () => {
     const [openDialog, setOpenDialog] = React.useState(false);
     const [editingUser, setEditingUser] = React.useState<any>(null);
+    const [searchTerm, setSearchTerm] = React.useState('');
     const queryClient = useQueryClient();
 
     const { data: users = [], isLoading } = useQuery({
@@ -95,6 +96,25 @@ const Users: React.FC = () => {
         formik.resetForm();
     };
 
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const filteredUsers = React.useMemo(() => {
+        if (!normalizedSearch) return users;
+
+        return users.filter((user: any) => {
+            const searchableValues = [
+                user.firstName ?? '',
+                user.lastName ?? '',
+                user.email ?? '',
+                user.department ?? '',
+            ];
+
+            return searchableValues
+                .join(' ')
+                .toLowerCase()
+                .includes(normalizedSearch);
+        });
+    }, [users, normalizedSearch]);
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -103,6 +123,15 @@ const Users: React.FC = () => {
                     Ajouter un utilisateur
                 </Button>
             </Box>
+
+            <TextField
+                fullWidth
+                label="Rechercher un utilisateur"
+                placeholder="Nom, prénom, email ou département"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ mb: 2 }}
+            />
 
             <TableContainer component={Paper}>
                 <Table>
@@ -117,10 +146,10 @@ const Users: React.FC = () => {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={4} align="center">Chargement...</TableCell></TableRow>
-                        ) : users.length === 0 ? (
+                        ) : filteredUsers.length === 0 ? (
                             <TableRow><TableCell colSpan={4} align="center">Aucun utilisateur trouvé</TableCell></TableRow>
                         ) : (
-                            users.map((item: any) => (
+                            filteredUsers.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.firstName} {item.lastName}</TableCell>
                                     <TableCell>{item.email}</TableCell>

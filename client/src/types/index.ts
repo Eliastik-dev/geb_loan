@@ -42,6 +42,7 @@ export type LoanStatus = typeof LoanStatus[keyof typeof LoanStatus];
 export interface Equipment {
     id: string;
     serialNumber: string;
+    serviceTag?: string | null;
     brand: string;
     model: string;
     typeId: string;

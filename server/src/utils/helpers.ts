@@ -19,6 +19,7 @@ type EquipmentWithType = {
     brand: string;
     model: string;
     serialNumber: string;
+    serviceTag: string | null;
 };
 
 type LoanItemForEmail = {
@@ -32,7 +33,12 @@ export const formatEquipmentList = (items: LoanItemForEmail[]): string => {
         .map(
             (item, index) =>
                 `${index + 1}. ${item.equipment.type.name} - ${item.equipment.brand} ${item.equipment.model}
-   Numéro de série: ${item.equipment.serialNumber}
+   Numéro d'inventaire: ${item.equipment.serialNumber}${
+                    item.equipment.serviceTag
+                        ? `
+   Service Tag: ${item.equipment.serviceTag}`
+                        : ''
+                }
    État: ${getConditionLabel(item.conditionOut)}`
         )
         .join('\n\n');

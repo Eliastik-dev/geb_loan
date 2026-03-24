@@ -89,6 +89,7 @@ const EquipmentInventory: React.FC = () => {
     const equipmentFormik = useFormik({
         initialValues: {
             serialNumber: '',
+            serviceTag: '',
             brand: '',
             model: '',
             typeId: '',
@@ -97,6 +98,7 @@ const EquipmentInventory: React.FC = () => {
         },
         validationSchema: Yup.object({
             serialNumber: Yup.string().required('Numéro d\'inventaire requis'),
+            serviceTag: Yup.string(),
             brand: Yup.string().required('Marque requise'),
             model: Yup.string().required('Modèle requis'),
             typeId: Yup.string().required('Type requis'),
@@ -118,6 +120,7 @@ const EquipmentInventory: React.FC = () => {
         setEditingEquipment(equipment);
         equipmentFormik.setValues({
             serialNumber: equipment.serialNumber,
+            serviceTag: equipment.serviceTag ?? '',
             brand: equipment.brand,
             model: equipment.model,
             typeId: equipment.typeId,
@@ -217,6 +220,7 @@ const EquipmentInventory: React.FC = () => {
                             <TableCell>Marque</TableCell>
                             <TableCell>Modèle</TableCell>
                             <TableCell>Numéro d'inventaire</TableCell>
+                            <TableCell>Service Tag</TableCell>
                             <TableCell>Statut</TableCell>
                             <TableCell>État</TableCell>
                             <TableCell align="right">Actions</TableCell>
@@ -225,13 +229,13 @@ const EquipmentInventory: React.FC = () => {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">
+                                <TableCell colSpan={8} align="center">
                                     Chargement...
                                 </TableCell>
                             </TableRow>
                         ) : equipment.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">
+                                <TableCell colSpan={8} align="center">
                                     Aucun équipement trouvé
                                 </TableCell>
                             </TableRow>
@@ -242,6 +246,7 @@ const EquipmentInventory: React.FC = () => {
                                     <TableCell>{item.brand}</TableCell>
                                     <TableCell>{item.model}</TableCell>
                                     <TableCell>{item.serialNumber}</TableCell>
+                                    <TableCell>{item.serviceTag || '—'}</TableCell>
                                     <TableCell>
                                         <Chip
                                             label={getStatusLabel(item.currentStatus)}
@@ -357,6 +362,16 @@ const EquipmentInventory: React.FC = () => {
                                 }
                                 fullWidth
                                 disabled={!!editingEquipment}
+                            />
+
+                            <TextField
+                                label="Service Tag"
+                                name="serviceTag"
+                                value={equipmentFormik.values.serviceTag}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                helperText="Identifiant constructeur (optionnel)"
+                                fullWidth
                             />
 
                             <TextField

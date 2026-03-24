@@ -33,6 +33,7 @@ model EquipmentType {
 model Equipment {
   id              String          @id @default(cuid())
   serialNumber    String          @unique
+  serviceTag      String?
   brand           String
   model           String
   typeId          String

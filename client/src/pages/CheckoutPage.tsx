@@ -133,12 +133,14 @@ const CheckoutPage: React.FC = () => {
     const [showAddEquipmentDialog, setShowAddEquipmentDialog] = useState(false);
     const [newEquipmentForm, setNewEquipmentForm] = useState<{
         serialNumber: string;
+        serviceTag: string;
         brand: string;
         model: string;
         typeId: string;
         condition: Condition;
     }>({
         serialNumber: '',
+        serviceTag: '',
         brand: '',
         model: '',
         typeId: '',
@@ -201,6 +203,7 @@ const CheckoutPage: React.FC = () => {
             setShowAddEquipmentDialog(false);
             setNewEquipmentForm({
                 serialNumber: '',
+                serviceTag: '',
                 brand: '',
                 model: '',
                 typeId: '',
@@ -336,7 +339,8 @@ const CheckoutPage: React.FC = () => {
             .map((item, index) => {
                 const eq = availableEquipment.find((e: any) => e.id === item.equipmentId);
                 if (!eq) return `${index + 1}. Équipement non trouvé`;
-                return `${index + 1}. ${eq.type?.name || 'Type'} - ${eq.brand} ${eq.model} (S/N: ${eq.serialNumber})`;
+                const tag = eq.serviceTag ? `, Service Tag: ${eq.serviceTag}` : '';
+                return `${index + 1}. ${eq.type?.name || 'Type'} - ${eq.brand} ${eq.model} (N° inventaire: ${eq.serialNumber}${tag})`;
             })
             .join('\n');
 
@@ -568,14 +572,15 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                             <TableCell>Type</TableCell>
                                             <TableCell>Marque</TableCell>
                                             <TableCell>Modèle</TableCell>
-                                            <TableCell>Numéro de série</TableCell>
+                                            <TableCell>Numéro d'inventaire</TableCell>
+                                            <TableCell>Service Tag</TableCell>
                                             <TableCell>État</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {availableEquipment.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={6} align="center">
+                                                <TableCell colSpan={7} align="center">
                                                     <Typography variant="body2" color="text.secondary">
                                                         Aucun équipement disponible
                                                     </Typography>
@@ -627,6 +632,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                                         <TableCell>{eq.brand || '-'}</TableCell>
                                                         <TableCell>{eq.model || '-'}</TableCell>
                                                         <TableCell>{eq.serialNumber || '-'}</TableCell>
+                                                        <TableCell>{eq.serviceTag || '—'}</TableCell>
                                                         <TableCell>
                                                             <Chip
                                                                 label={getConditionLabel(eq.condition)}
@@ -677,9 +683,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                                                     }}
                                                                 >
                                                                     <Typography variant="subtitle1">
-                                                                        {equipment.type?.name || 'Type'} -{' '}
-                                                                        {equipment.brand} {equipment.model} (S/N:{' '}
-                                                                        {equipment.serialNumber})
+                                                                        {`${equipment.type?.name || 'Type'} - ${equipment.brand} ${equipment.model} (N° inventaire: ${equipment.serialNumber}${equipment.serviceTag ? ` · Service Tag: ${equipment.serviceTag}` : ''})`}
                                                                     </Typography>
                                                                     <IconButton
                                                                         color="error"
@@ -967,6 +971,30 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                             <TextField
                                 fullWidth
                                 size="medium"
+                                label="Service Tag"
+                                value={newEquipmentForm.serviceTag}
+                                onChange={(e) =>
+                                    setNewEquipmentForm({
+                                        ...newEquipmentForm,
+                                        serviceTag: e.target.value,
+                                    })
+                                }
+                                helperText="Optionnel — identifiant constructeur"
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        fontSize: '1.125rem',
+                                        padding: '18px 16px',
+                                    },
+                                    '& .MuiInputLabel-root': {
+                                        fontSize: '1rem',
+                                    },
+                                }}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <TextField
+                                fullWidth
+                                size="medium"
                                 select
                                 label="Type d'équipement *"
                                 value={newEquipmentForm.typeId}
@@ -1074,6 +1102,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                             }
                             await createEquipmentMutation.mutateAsync({
                                 serialNumber: newEquipmentForm.serialNumber,
+                                serviceTag: newEquipmentForm.serviceTag.trim() || undefined,
                                 typeId: newEquipmentForm.typeId,
                                 brand: newEquipmentForm.brand,
                                 model: newEquipmentForm.model,

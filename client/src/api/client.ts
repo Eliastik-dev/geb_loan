@@ -13,6 +13,7 @@ export const api = axios.create({
 // Equipment API
 export interface CreateEquipmentPayload {
     serialNumber: string;
+    serviceTag?: string | null;
     brand: string;
     model: string;
     typeId: string;

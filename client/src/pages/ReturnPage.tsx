@@ -410,7 +410,10 @@ const ReturnPage: React.FC = () => {
                                                         </Typography>
                                                         <br />
                                                         <Typography variant="caption" color="text.secondary">
-                                                            S/N: {item.equipment.serialNumber}
+                                                            N° inventaire: {item.equipment.serialNumber}
+                                                            {item.equipment.serviceTag
+                                                                ? ` · Service Tag: ${item.equipment.serviceTag}`
+                                                                : ''}
                                                         </Typography>
                                                     </Box>
                                                 </TableCell>
@@ -659,6 +662,18 @@ const ReturnPage: React.FC = () => {
                                                             {loanItem?.equipment.type.name} -{' '}
                                                             {loanItem?.equipment.brand}{' '}
                                                             {loanItem?.equipment.model}
+                                                            <Typography
+                                                                component="span"
+                                                                variant="caption"
+                                                                color="text.secondary"
+                                                                display="block"
+                                                            >
+                                                                N° inventaire:{' '}
+                                                                {loanItem?.equipment.serialNumber}
+                                                                {loanItem?.equipment.serviceTag
+                                                                    ? ` · Service Tag: ${loanItem.equipment.serviceTag}`
+                                                                    : ''}
+                                                            </Typography>
                                                         </TableCell>
                                                         <TableCell>
                                                             {item.conditionIn &&

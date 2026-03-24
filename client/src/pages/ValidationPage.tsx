@@ -173,7 +173,10 @@ const ValidationPage: React.FC = () => {
                                     {item.equipment.model}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Numéro de série: {item.equipment.serialNumber}
+                                    N° inventaire: {item.equipment.serialNumber}
+                                    {item.equipment.serviceTag
+                                        ? ` · Service Tag: ${item.equipment.serviceTag}`
+                                        : ''}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     État: {item.conditionOut}

@@ -41,6 +41,7 @@ async function main() {
         await prisma.equipment.create({
             data: {
                 serialNumber: 'LAPTOP-001',
+                serviceTag: 'DELL-TAG-001',
                 brand: 'Dell',
                 model: 'Latitude 5520',
                 typeId: laptopType.id,
@@ -51,6 +52,7 @@ async function main() {
         await prisma.equipment.create({
             data: {
                 serialNumber: 'LAPTOP-002',
+                serviceTag: 'HP-TAG-002',
                 brand: 'HP',
                 model: 'EliteBook 840',
                 typeId: laptopType.id,

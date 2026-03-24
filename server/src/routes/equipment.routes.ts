@@ -3,6 +3,13 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
+function normalizeServiceTag(raw: unknown): string | null {
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw !== 'string') return null;
+    const t = raw.trim();
+    return t.length > 0 ? t : null;
+}
+
 // Get all equipment types
 router.get('/types', async (req: Request, res: Response) => {
     try {
@@ -63,6 +70,16 @@ router.get('/', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
     try {
         const { serialNumber, brand, model, typeId, condition } = req.body;
+        const serviceTag = normalizeServiceTag(req.body.serviceTag);
+
+        if (serviceTag) {
+            const tagTaken = await prisma.equipment.findFirst({
+                where: { serviceTag },
+            });
+            if (tagTaken) {
+                return res.status(400).json({ error: 'Service Tag already in use' });
+            }
+        }
 
         // Check if serial number already exists
         const existing = await prisma.equipment.findUnique({
@@ -76,6 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
         const equipment = await prisma.equipment.create({
             data: {
                 serialNumber,
+                serviceTag,
                 brand,
                 model,
                 typeId,
@@ -97,6 +115,20 @@ router.put('/:id', async (req: Request, res: Response) => {
         const { id } = req.params;
         const { serialNumber, brand, model, typeId, currentStatus, condition } = req.body;
 
+        let serviceTag: string | null | undefined = undefined;
+        if ('serviceTag' in req.body) {
+            serviceTag = normalizeServiceTag(req.body.serviceTag);
+        }
+
+        if (serviceTag) {
+            const tagTaken = await prisma.equipment.findFirst({
+                where: { serviceTag, NOT: { id } },
+            });
+            if (tagTaken) {
+                return res.status(400).json({ error: 'Service Tag already in use' });
+            }
+        }
+
         const equipment = await prisma.equipment.update({
             where: { id },
             data: {
@@ -106,6 +138,7 @@ router.put('/:id', async (req: Request, res: Response) => {
                 typeId,
                 currentStatus,
                 condition: condition || 'GOOD',
+                ...(serviceTag !== undefined ? { serviceTag } : {}),
             },
             include: { type: true },
         });

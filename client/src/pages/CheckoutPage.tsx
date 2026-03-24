@@ -31,6 +31,7 @@ import {
     DialogActions,
     Chip,
     FormControlLabel,
+    createFilterOptions,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -59,6 +60,24 @@ const BRANDS = [
     'Logitech',
     'Autre',
 ];
+
+type UserOption = {
+    id?: string | number;
+    email?: string;
+    lastName?: string;
+    firstName?: string;
+    department?: string;
+};
+
+const userFilterOptions = createFilterOptions<UserOption>({
+    stringify: (option) =>
+        [
+            option.firstName ?? '',
+            option.lastName ?? '',
+            option.email ?? '',
+            option.department ?? '',
+        ].join(' '),
+});
 
 interface EquipmentItem {
     equipmentId: string;
@@ -372,6 +391,7 @@ Date: ${new Date().toLocaleDateString('fr-FR')}`;
                                     <Autocomplete
                                         freeSolo
                                         options={usersData}
+                                        filterOptions={userFilterOptions}
                                         getOptionLabel={(option: any) =>
                                             typeof option === 'string' ? option : `${option.firstName} ${option.lastName} (${option.email})`
                                         }

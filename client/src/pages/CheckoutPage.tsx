@@ -351,13 +351,20 @@ const CheckoutPage: React.FC = () => {
             }).join('\n') + '\n'
             : '';
 
+        const agreementDate = (() => {
+            // Date picker returns "yyyy-mm-dd" => avoid timezone shifts by forcing midnight local time.
+            if (!collaborator.loanDate) return new Date().toLocaleDateString('fr-FR');
+            const d = new Date(`${collaborator.loanDate}T00:00:00`);
+            return Number.isNaN(d.getTime()) ? new Date().toLocaleDateString('fr-FR') : d.toLocaleDateString('fr-FR');
+        })();
+
         return `Je soussigné(e) ${collaborator.lastName.toUpperCase()} ${collaborator.firstName}, reconnais avoir reçu le matériel suivant :
 
 ${equipmentList}
 ${accountsList}
 Je m'engage à utiliser ce matériel conformément à la charte informatique de l'entreprise GEB et à restituer le matériel dans l'état dans lequel il m'a été fourni.
 
-Date: ${new Date().toLocaleDateString('fr-FR')}`;
+Date: ${agreementDate}`;
     };
 
     return (

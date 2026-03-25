@@ -21,11 +21,13 @@ import {
     ListItem,
     ListItemText,
     Divider,
+    Tooltip,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Category as CategoryIcon,
     Edit as EditIcon,
+    Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentApi } from '../api/client';
@@ -38,6 +40,8 @@ const EquipmentInventory: React.FC = () => {
     const [openEquipmentDialog, setOpenEquipmentDialog] = React.useState(false);
     const [openTypeDialog, setOpenTypeDialog] = React.useState(false);
     const [editingEquipment, setEditingEquipment] = React.useState<any>(null);
+    const [deletingEquipment, setDeletingEquipment] = React.useState<any>(null);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const queryClient = useQueryClient();
 
     const { data: equipment = [], isLoading } = useQuery({
@@ -74,6 +78,23 @@ const EquipmentInventory: React.FC = () => {
             setOpenEquipmentDialog(false);
             setEditingEquipment(null);
             equipmentFormik.resetForm();
+        },
+    });
+
+    const deleteEquipmentMutation = useMutation({
+        mutationFn: (id: string) => equipmentApi.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['equipment'] });
+            setDeletingEquipment(null);
+            setDeleteError(null);
+        },
+        onError: (err: any) => {
+            const msg =
+                err?.response?.data?.error ||
+                err?.response?.data?.message ||
+                err?.message ||
+                'Suppression impossible';
+            setDeleteError(String(msg));
         },
     });
 
@@ -134,6 +155,17 @@ const EquipmentInventory: React.FC = () => {
         setOpenEquipmentDialog(false);
         setEditingEquipment(null);
         equipmentFormik.resetForm();
+    };
+
+    const handleAskDelete = (equipment: any) => {
+        setDeleteError(null);
+        setDeletingEquipment(equipment);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        if (deleteEquipmentMutation.isPending) return;
+        setDeletingEquipment(null);
+        setDeleteError(null);
     };
 
     const typeFormik = useFormik({
@@ -267,9 +299,31 @@ const EquipmentInventory: React.FC = () => {
                                             startIcon={<EditIcon />}
                                             onClick={() => handleEdit(item)}
                                             variant="outlined"
+                                            sx={{ mr: 1 }}
                                         >
                                             Modifier
                                         </Button>
+                                        <Tooltip
+                                            title={
+                                                item.currentStatus !== EquipmentStatus.AVAILABLE
+                                                    ? "Suppression possible uniquement si le statut est « Disponible »"
+                                                    : ''
+                                            }
+                                            arrow
+                                        >
+                                            <span>
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<DeleteIcon />}
+                                                    color="error"
+                                                    variant="outlined"
+                                                    onClick={() => handleAskDelete(item)}
+                                                    disabled={item.currentStatus !== EquipmentStatus.AVAILABLE}
+                                                >
+                                                    Supprimer
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -530,6 +584,58 @@ const EquipmentInventory: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenTypeDialog(false)}>Fermer</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Equipment Confirmation Dialog */}
+            <Dialog
+                open={Boolean(deletingEquipment)}
+                onClose={handleCloseDeleteDialog}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Supprimer cet équipement ?</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Cette action est irréversible.
+                    </Typography>
+
+                    {deletingEquipment && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="subtitle2">
+                                {deletingEquipment.type?.name || 'Type'} - {deletingEquipment.brand}{' '}
+                                {deletingEquipment.model}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                N° inventaire : {deletingEquipment.serialNumber}
+                                {deletingEquipment.serviceTag
+                                    ? ` · Service Tag : ${deletingEquipment.serviceTag}`
+                                    : ''}
+                            </Typography>
+                        </Box>
+                    )}
+
+                    {deleteError && (
+                        <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+                            {deleteError}
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDeleteDialog} disabled={deleteEquipmentMutation.isPending}>
+                        Annuler
+                    </Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        disabled={!deletingEquipment || deleteEquipmentMutation.isPending}
+                        onClick={() => {
+                            if (!deletingEquipment?.id) return;
+                            deleteEquipmentMutation.mutate(deletingEquipment.id);
+                        }}
+                    >
+                        Supprimer
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Box>

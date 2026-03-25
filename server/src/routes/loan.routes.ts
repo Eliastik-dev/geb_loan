@@ -54,6 +54,15 @@ router.post('/checkout', async (req: Request<unknown, unknown, CheckoutRequestBo
     try {
         const { collaborator, equipment, accounts, checkoutNotes, itStaffName } = req.body;
 
+        let checkoutDate: Date | undefined = undefined;
+        if (collaborator.loanDate) {
+            const parsed = new Date(collaborator.loanDate);
+            if (Number.isNaN(parsed.getTime())) {
+                return res.status(400).json({ error: 'Invalid loanDate (expected ISO date or yyyy-mm-dd)' });
+            }
+            checkoutDate = parsed;
+        }
+
         const validationCode = generateValidationCode();
 
         const loan = await prisma.$transaction(async (tx) => {
@@ -69,7 +78,7 @@ router.post('/checkout', async (req: Request<unknown, unknown, CheckoutRequestBo
                         lastName: collaborator.lastName,
                         firstName: collaborator.firstName,
                         department: collaborator.department ?? undefined,
-                        hireDate: collaborator.loanDate ? new Date(collaborator.loanDate) : null,
+                        hireDate: null,
                     },
                 });
             }
@@ -81,6 +90,7 @@ router.post('/checkout', async (req: Request<unknown, unknown, CheckoutRequestBo
                     checkoutNotes,
                     checkoutITStaff: itStaffName,
                     checkoutValidated: true,
+                    ...(checkoutDate ? { checkoutDate } : {}),
                     items: {
                         create: equipment.map((item) => ({
                             equipmentId: item.equipmentId,

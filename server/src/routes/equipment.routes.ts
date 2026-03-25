@@ -154,6 +154,21 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const eq = await prisma.equipment.findUnique({
+            where: { id },
+            select: { id: true, currentStatus: true },
+        });
+
+        if (!eq) {
+            return res.status(404).json({ error: 'Equipment not found' });
+        }
+
+        if (eq.currentStatus !== 'AVAILABLE') {
+            return res.status(400).json({
+                error: "Impossible de supprimer : l'équipement n'est pas disponible (en prêt ou indisponible).",
+            });
+        }
+
         await prisma.equipment.delete({ where: { id } });
         res.json({ success: true, message: 'Equipment deleted successfully' });
     } catch (error) {

@@ -173,7 +173,18 @@ router.delete('/:id', async (req: Request, res: Response) => {
         res.json({ success: true, message: 'Equipment deleted successfully' });
     } catch (error) {
         console.error('Error deleting equipment:', error);
-        res.status(500).json({ error: 'Failed to delete equipment' });
+        const code = (error as any)?.code;
+        // P2003: Foreign key constraint failed (e.g., equipment referenced by a loan item)
+        if (code === 'P2003') {
+            return res.status(409).json({
+                error: "Suppression impossible : cet équipement est déjà référencé (ex: prêt existant).",
+            });
+        }
+        // P2025: Record not found
+        if (code === 'P2025') {
+            return res.status(404).json({ error: 'Equipment not found' });
+        }
+        return res.status(500).json({ error: 'Failed to delete equipment' });
     }
 });
 

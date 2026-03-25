@@ -3,6 +3,11 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
+function parseUserId(idParam: string): number | null {
+    const n = Number.parseInt(idParam, 10);
+    return Number.isFinite(n) ? n : null;
+}
+
 // GET all users
 router.get('/', async (req: Request, res: Response) => {
     try {
@@ -19,7 +24,10 @@ router.get('/', async (req: Request, res: Response) => {
 // GET single user
 router.get('/:id', async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = parseUserId(req.params.id);
+        if (id === null) {
+            return res.status(400).json({ error: 'Invalid user id' });
+        }
         const user = await prisma.user.findUnique({
             where: { id },
         });
@@ -69,7 +77,10 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update user
 router.put('/:id', async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = parseUserId(req.params.id);
+        if (id === null) {
+            return res.status(400).json({ error: 'Invalid user id' });
+        }
         const { email, firstName, lastName, department, hireDate } = req.body;
 
         const user = await prisma.user.update({
@@ -93,7 +104,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 // DELETE user
 router.delete('/:id', async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = parseUserId(req.params.id);
+        if (id === null) {
+            return res.status(400).json({ error: 'Invalid user id' });
+        }
         await prisma.user.delete({
             where: { id },
         });

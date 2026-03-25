@@ -22,12 +22,15 @@ import {
     ListItemText,
     Divider,
     Tooltip,
+    InputAdornment,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Category as CategoryIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    Search as SearchIcon,
+    Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentApi } from '../api/client';
@@ -42,6 +45,7 @@ const EquipmentInventory: React.FC = () => {
     const [editingEquipment, setEditingEquipment] = React.useState<any>(null);
     const [deletingEquipment, setDeletingEquipment] = React.useState<any>(null);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [search, setSearch] = React.useState('');
     const queryClient = useQueryClient();
 
     const { data: equipment = [], isLoading } = useQuery({
@@ -211,6 +215,28 @@ const EquipmentInventory: React.FC = () => {
         }
     };
 
+    const filteredEquipment = React.useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return equipment;
+
+        return equipment.filter((item: any) => {
+            const haystack = [
+                item?.type?.name,
+                item?.brand,
+                item?.model,
+                item?.serialNumber,
+                item?.serviceTag,
+                getStatusLabel(item?.currentStatus),
+                item?.currentStatus,
+            ]
+                .filter((v) => typeof v === 'string' && v.trim().length > 0)
+                .join(' ')
+                .toLowerCase();
+
+            return haystack.includes(q);
+        });
+    }, [equipment, search]);
+
     return (
         <Box>
             <Box
@@ -244,6 +270,38 @@ const EquipmentInventory: React.FC = () => {
                 </Box>
             </Box>
 
+            <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <TextField
+                    fullWidth
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher (type, marque, modèle, n° inventaire, service tag, statut...)"
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                            </InputAdornment>
+                        ),
+                        endAdornment: search ? (
+                            <InputAdornment position="end">
+                                <Tooltip title="Effacer">
+                                    <Button
+                                        onClick={() => setSearch('')}
+                                        size="small"
+                                        sx={{ minWidth: 0, px: 1 }}
+                                    >
+                                        <ClearIcon fontSize="small" />
+                                    </Button>
+                                </Tooltip>
+                            </InputAdornment>
+                        ) : undefined,
+                    }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                    {filteredEquipment.length} résultat{filteredEquipment.length > 1 ? 's' : ''} (sur {equipment.length})
+                </Typography>
+            </Paper>
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
@@ -265,14 +323,16 @@ const EquipmentInventory: React.FC = () => {
                                     Chargement...
                                 </TableCell>
                             </TableRow>
-                        ) : equipment.length === 0 ? (
+                        ) : filteredEquipment.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} align="center">
-                                    Aucun équipement trouvé
+                                    {equipment.length === 0
+                                        ? 'Aucun équipement trouvé'
+                                        : 'Aucun résultat pour cette recherche'}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            equipment.map((item: any) => (
+                            filteredEquipment.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.type.name}</TableCell>
                                     <TableCell>{item.brand}</TableCell>

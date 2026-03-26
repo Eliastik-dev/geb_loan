@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { loanApi } from '../api/client';
 import type { Loan } from '../types';
 
@@ -34,12 +35,14 @@ const ReturnedLoansHistory: React.FC = () => {
         data: returnedLoans = [],
         isLoading,
         isError,
+        error,
     } = useQuery({
         queryKey: ['returned-loans', searchQuery],
         queryFn: async () => {
             const response = await loanApi.getReturned(searchQuery || undefined);
             return response.data as Loan[];
         },
+        retry: false,
     });
 
     return (
@@ -73,7 +76,9 @@ const ReturnedLoansHistory: React.FC = () => {
 
             {isError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                    Erreur lors du chargement de l’historique. Veuillez réessayer.
+                    {axios.isAxiosError(error) && error.response?.status === 404
+                        ? "L'endpoint d'historique n'est pas disponible sur ce serveur. Déployez/redémarrez l'API backend."
+                        : 'Erreur lors du chargement de l’historique. Veuillez réessayer.'}
                 </Alert>
             )}
 

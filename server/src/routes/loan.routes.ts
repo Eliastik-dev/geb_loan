@@ -350,6 +350,54 @@ router.get('/active', async (req: Request, res: Response) => {
     }
 });
 
+// Search returned loans (history)
+router.get('/returned', async (req: Request, res: Response) => {
+    try {
+        const { search } = req.query;
+
+        const loans = await prisma.loan.findMany({
+            where: {
+                status: 'RETURNED',
+                returnValidated: true,
+                ...(search && {
+                    user: {
+                        OR: [
+                            { email: { contains: search as string } },
+                            { firstName: { contains: search as string } },
+                            { lastName: { contains: search as string } },
+                        ],
+                    },
+                }),
+            },
+            include: {
+                items: {
+                    include: {
+                        equipment: {
+                            include: {
+                                type: true,
+                            },
+                        },
+                    },
+                },
+                accounts: {
+                    include: {
+                        accountType: true,
+                    },
+                },
+                user: true,
+            },
+            orderBy: {
+                returnDate: 'desc',
+            },
+        });
+
+        res.json(loans);
+    } catch (error) {
+        console.error('Error searching returned loans:', error);
+        res.status(500).json({ error: 'Failed to search returned loans' });
+    }
+});
+
 // Process return
 // In the current UX, the return is confirmed directly by IT; no validation code is needed.
 // We immediately mark the loan's return as validated, update equipment status, and

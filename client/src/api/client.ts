@@ -114,6 +114,8 @@ export const loanApi = {
         api.post(`/loans/validate-checkout/${code}`),
     getActive: (search?: string) =>
         api.get('/loans/active', { params: { search } }),
+    getReturned: (search?: string) =>
+        api.get('/loans/returned', { params: { search } }),
     processReturn: (loanId: string, data: ProcessReturnPayload) =>
         api.post(`/loans/return/${loanId}`, data),
     updateAccounts: (loanId: string, accounts: string[]) =>

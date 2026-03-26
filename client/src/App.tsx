@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import CheckoutPage from './pages/CheckoutPage';
 import ValidationPage from './pages/ValidationPage';
 import ReturnPage from './pages/ReturnPage';
+import ReturnedLoansHistory from './pages/ReturnedLoansHistory';
 import EquipmentInventory from './pages/EquipmentInventory';
 import Users from './pages/Users';
 import AccountTypes from './pages/AccountTypes';
@@ -33,6 +34,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="return" element={<ReturnPage />} />
+              <Route path="returns-history" element={<ReturnedLoansHistory />} />
               <Route path="inventory" element={<EquipmentInventory />} />
               <Route path="users" element={<Users />} />
               <Route path="account-types" element={<AccountTypes />} />

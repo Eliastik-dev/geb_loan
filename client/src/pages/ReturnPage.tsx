@@ -207,6 +207,8 @@ const ReturnPage: React.FC = () => {
     };
 
     const returnedItemsCount = formik.values.items.filter((item) => item.returned).length;
+    const returnedAccountsCount = formik.values.accounts.filter((acc) => acc.returned).length;
+    const hasSomethingToProcess = returnedItemsCount > 0 || returnedAccountsCount > 0;
 
     return (
         <Container maxWidth={false} sx={{ py: 4 }}>
@@ -703,8 +705,10 @@ const ReturnPage: React.FC = () => {
                         <Button
                             variant="contained"
                             onClick={() => {
-                                if (returnedItemsCount === 0) {
-                                    alert('Veuillez marquer au moins un équipement comme retourné');
+                                if (!hasSomethingToProcess) {
+                                    alert(
+                                        'Veuillez marquer au moins un équipement retourné ou au moins un compte à désactiver'
+                                    );
                                     return;
                                 }
                                 formik.handleSubmit();
@@ -712,7 +716,7 @@ const ReturnPage: React.FC = () => {
                             disabled={
                                 formik.isSubmitting ||
                                 processReturnMutation.isPending ||
-                                returnedItemsCount === 0
+                                !hasSomethingToProcess
                             }
                             startIcon={
                                 formik.isSubmitting || processReturnMutation.isPending ? (

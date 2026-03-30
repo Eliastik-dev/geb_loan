@@ -15,6 +15,12 @@ import {
     TableRow,
     Alert,
     Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    Stack,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +30,7 @@ import type { Loan } from '../types';
 
 const ReturnedLoansHistory: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const debouncedSearch = useCallback((value: string) => {
@@ -105,7 +112,12 @@ const ReturnedLoansHistory: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {returnedLoans.map((loan) => (
-                                <TableRow key={loan.id} hover>
+                                <TableRow
+                                    key={loan.id}
+                                    hover
+                                    sx={{ cursor: 'pointer' }}
+                                    onClick={() => setSelectedLoan(loan)}
+                                >
                                     <TableCell>
                                         <Typography variant="body2" fontWeight="medium">
                                             {loan.user.firstName} {loan.user.lastName}
@@ -148,6 +160,169 @@ const ReturnedLoansHistory: React.FC = () => {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            {/* Detail modal */}
+            <Dialog
+                open={Boolean(selectedLoan)}
+                onClose={() => setSelectedLoan(null)}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle>Détails du prêt rendu</DialogTitle>
+                <DialogContent dividers>
+                    {selectedLoan && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Collaborateur
+                                </Typography>
+                                <Typography>
+                                    {selectedLoan.user.firstName} {selectedLoan.user.lastName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {selectedLoan.user.email}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {selectedLoan.user.department ||
+                                        'Département non spécifié'}
+                                </Typography>
+                            </Box>
+
+                            <Divider />
+
+                            <Box>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Informations de prêt
+                                </Typography>
+                                <Stack spacing={0.5}>
+                                    <Typography variant="body2">
+                                        <strong>Date de prêt :</strong>{' '}
+                                        {new Date(
+                                            selectedLoan.checkoutDate
+                                        ).toLocaleDateString('fr-FR')}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>Date de retour :</strong>{' '}
+                                        {selectedLoan.returnDate
+                                            ? new Date(
+                                                  selectedLoan.returnDate
+                                              ).toLocaleDateString('fr-FR')
+                                            : '-'}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>IT prêt :</strong>{' '}
+                                        {selectedLoan.checkoutITStaff}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>IT retour :</strong>{' '}
+                                        {selectedLoan.returnITStaff || '-'}
+                                    </Typography>
+                                    {selectedLoan.checkoutNotes && (
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >
+                                            <strong>Notes de prêt :</strong>{' '}
+                                            {selectedLoan.checkoutNotes}
+                                        </Typography>
+                                    )}
+                                </Stack>
+                            </Box>
+
+                            <Divider />
+
+                            <Box>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Matériel
+                                </Typography>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Équipement</TableCell>
+                                            <TableCell>Numéro d'inventaire</TableCell>
+                                            <TableCell>Service Tag</TableCell>
+                                            <TableCell>État au prêt</TableCell>
+                                            <TableCell>État au retour</TableCell>
+                                            <TableCell>Notes retour</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {selectedLoan.items.map((item) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight="medium">
+                                                        {item.equipment.type.name}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                    >
+                                                        {item.equipment.brand}{' '}
+                                                        {item.equipment.model}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {item.equipment.serialNumber}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {item.equipment.serviceTag || '—'}
+                                                </TableCell>
+                                                <TableCell>{item.conditionOut}</TableCell>
+                                                <TableCell>
+                                                    {item.conditionIn || 'Non renseigné'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {item.returnNotes || '—'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </Box>
+
+                            {selectedLoan.accounts && selectedLoan.accounts.length > 0 && (
+                                <>
+                                    <Divider />
+                                    <Box>
+                                        <Typography variant="subtitle2" gutterBottom>
+                                            Comptes liés
+                                        </Typography>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Type de compte</TableCell>
+                                                    <TableCell>Statut</TableCell>
+                                                    <TableCell>Notes de retour</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {selectedLoan.accounts.map((acc) => (
+                                                    <TableRow key={acc.id}>
+                                                        <TableCell>
+                                                            {acc.accountType?.name || 'Inconnu'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {acc.returned
+                                                                ? 'Désactivé'
+                                                                : 'Actif'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {acc.returnNotes || '—'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </Box>
+                                </>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSelectedLoan(null)}>Fermer</Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

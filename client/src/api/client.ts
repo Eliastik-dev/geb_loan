@@ -18,6 +18,7 @@ export interface CreateEquipmentPayload {
     model: string;
     typeId: string;
     condition?: Condition;
+    comments?: string;
 }
 
 export interface UpdateEquipmentPayload extends CreateEquipmentPayload {

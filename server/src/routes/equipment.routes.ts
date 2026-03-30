@@ -69,7 +69,7 @@ router.get('/', async (req: Request, res: Response) => {
 // Create new equipment
 router.post('/', async (req: Request, res: Response) => {
     try {
-        const { serialNumber, brand, model, typeId, condition } = req.body;
+        const { serialNumber, brand, model, typeId, condition, comments } = req.body;
         const serviceTag = normalizeServiceTag(req.body.serviceTag);
 
         if (serviceTag) {
@@ -98,6 +98,7 @@ router.post('/', async (req: Request, res: Response) => {
                 model,
                 typeId,
                 condition: condition || 'GOOD',
+                comments: comments ?? null,
             },
             include: { type: true },
         });
@@ -113,7 +114,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { serialNumber, brand, model, typeId, currentStatus, condition } = req.body;
+        const { serialNumber, brand, model, typeId, currentStatus, condition, comments } = req.body;
 
         let serviceTag: string | null | undefined = undefined;
         if ('serviceTag' in req.body) {
@@ -138,6 +139,7 @@ router.put('/:id', async (req: Request, res: Response) => {
                 typeId,
                 currentStatus,
                 condition: condition || 'GOOD',
+                comments: comments ?? null,
                 ...(serviceTag !== undefined ? { serviceTag } : {}),
             },
             include: { type: true },

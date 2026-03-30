@@ -49,6 +49,7 @@ export interface Equipment {
     type: EquipmentType;
     currentStatus: EquipmentStatus;
     condition: Condition;
+    comments?: string;
 }
 
 export interface LoanItem {

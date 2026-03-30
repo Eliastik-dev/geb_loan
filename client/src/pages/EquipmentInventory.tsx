@@ -120,6 +120,7 @@ const EquipmentInventory: React.FC = () => {
             typeId: '',
             condition: Condition.GOOD,
             currentStatus: EquipmentStatus.AVAILABLE,
+            comments: '',
         },
         validationSchema: Yup.object({
             serialNumber: Yup.string().required('Numéro d\'inventaire requis'),
@@ -151,6 +152,7 @@ const EquipmentInventory: React.FC = () => {
             typeId: equipment.typeId,
             condition: equipment.condition,
             currentStatus: equipment.currentStatus,
+            comments: equipment.comments ?? '',
         });
         setOpenEquipmentDialog(true);
     };
@@ -311,6 +313,7 @@ const EquipmentInventory: React.FC = () => {
                             <TableCell>Modèle</TableCell>
                             <TableCell>Numéro d'inventaire</TableCell>
                             <TableCell>Service Tag</TableCell>
+                            <TableCell>Commentaires</TableCell>
                             <TableCell>Statut</TableCell>
                             <TableCell>État</TableCell>
                             <TableCell align="right">Actions</TableCell>
@@ -339,6 +342,11 @@ const EquipmentInventory: React.FC = () => {
                                     <TableCell>{item.model}</TableCell>
                                     <TableCell>{item.serialNumber}</TableCell>
                                     <TableCell>{item.serviceTag || '—'}</TableCell>
+                                    <TableCell>
+                                        {item.comments && item.comments.trim().length > 0
+                                            ? item.comments
+                                            : '—'}
+                                    </TableCell>
                                     <TableCell>
                                         <Chip
                                             label={getStatusLabel(item.currentStatus)}
@@ -475,7 +483,6 @@ const EquipmentInventory: React.FC = () => {
                                     equipmentFormik.errors.serialNumber
                                 }
                                 fullWidth
-                                disabled={!!editingEquipment}
                             />
 
                             <TextField
@@ -539,6 +546,18 @@ const EquipmentInventory: React.FC = () => {
                                     <MenuItem value={EquipmentStatus.RETIRED}>Retiré</MenuItem>
                                 </TextField>
                             )}
+
+                            <TextField
+                                label="Commentaires"
+                                name="comments"
+                                value={equipmentFormik.values.comments}
+                                onChange={equipmentFormik.handleChange}
+                                onBlur={equipmentFormik.handleBlur}
+                                fullWidth
+                                multiline
+                                rows={3}
+                                placeholder="Notes internes sur le matériel (état particulier, affectation, historique, etc.)"
+                            />
                         </Box>
                     </DialogContent>
                     <DialogActions>

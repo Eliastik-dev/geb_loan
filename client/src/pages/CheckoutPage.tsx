@@ -146,6 +146,7 @@ const CheckoutPage: React.FC = () => {
         typeId: '',
         condition: Condition.GOOD,
     });
+    const [equipmentSearch, setEquipmentSearch] = useState('');
     const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
     const [newAccountForm, setNewAccountForm] = useState({
         name: '',
@@ -159,6 +160,29 @@ const CheckoutPage: React.FC = () => {
             return response.data;
         },
     });
+
+    const filteredAvailableEquipment = useMemo(
+        () =>
+            availableEquipment.filter((eq: any) => {
+                const q = equipmentSearch.trim().toLowerCase();
+                if (!q) return true;
+                const haystack = [
+                    eq.type?.name,
+                    eq.brand,
+                    eq.model,
+                    eq.serialNumber,
+                    eq.serviceTag,
+                ]
+                    .filter(
+                        (v: unknown): v is string =>
+                            typeof v === 'string' && v.trim().length > 0
+                    )
+                    .join(' ')
+                    .toLowerCase();
+                return haystack.includes(q);
+            }),
+        [availableEquipment, equipmentSearch]
+    );
 
     const { data: equipmentTypes = [] } = useQuery({
         queryKey: ['equipment-types'],
@@ -544,7 +568,7 @@ Date: ${agreementDate}`;
                     {activeStep === 1 && (
                         <Paper sx={{ p: 3, mb: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                                <Typography variant="h6">Sélection des équipements</Typography>
+                            <Typography variant="h6">Sélection des équipements</Typography>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Button
                                         startIcon={<AddIcon />}
@@ -567,9 +591,37 @@ Date: ${agreementDate}`;
                             </Box>
                             <Divider sx={{ mb: 3 }} />
 
-                            {/* Available Equipment Table */}
+                            {/* Search & Available Equipment Table */}
+                            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    value={equipmentSearch}
+                                    onChange={(e) => setEquipmentSearch(e.target.value)}
+                                    placeholder="Rechercher (type, marque, modèle, n° inventaire, service tag...)"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <SearchIcon
+                                                fontSize="small"
+                                                sx={{ mr: 1, color: 'text.secondary' }}
+                                            />
+                                        ),
+                                        endAdornment: equipmentSearch ? (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setEquipmentSearch('')}
+                                            >
+                                                <ClearAllIcon fontSize="small" />
+                                            </IconButton>
+                                        ) : undefined,
+                                    }}
+                                />
+                            </Box>
                             <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
-                                Équipements disponibles ({availableEquipment.length})
+                                Équipements disponibles ({filteredAvailableEquipment.length}
+                                {equipmentSearch
+                                    ? ` sur ${availableEquipment.length}`
+                                    : ''})
                             </Typography>
                             <TableContainer sx={{ mb: 3, maxHeight: 400 }}>
                                 <Table stickyHeader size="small">
@@ -585,7 +637,7 @@ Date: ${agreementDate}`;
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {availableEquipment.length === 0 ? (
+                                        {filteredAvailableEquipment.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={7} align="center">
                                                     <Typography variant="body2" color="text.secondary">
@@ -594,7 +646,7 @@ Date: ${agreementDate}`;
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            availableEquipment.map((eq: any) => {
+                                            filteredAvailableEquipment.map((eq: any) => {
                                                 const isSelected = formik.values.equipment.some(
                                                     (item) => item.equipmentId === eq.id
                                                 );
@@ -925,7 +977,7 @@ Date: ${agreementDate}`;
                                         )
                                     }
                                 >
-                                    Valider le prêt
+                                    Signer électroniquement
                                 </Button>
                             )}
                         </Box>

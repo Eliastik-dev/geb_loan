@@ -38,6 +38,7 @@ import {
     Delete as DeleteIcon,
     ClearAll as ClearAllIcon,
     CheckCircle as CheckCircleIcon,
+    Search as SearchIcon,
     CheckBox as CheckBoxIcon,
     CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 } from '@mui/icons-material';

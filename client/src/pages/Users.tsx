@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton
+    Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Autocomplete,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../api/client';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
 
 const Users: React.FC = () => {
     const [openDialog, setOpenDialog] = React.useState(false);
@@ -115,6 +117,31 @@ const Users: React.FC = () => {
         });
     }, [users, normalizedSearch]);
 
+    const departmentOptions = React.useMemo(() => {
+        const set = new Set<string>();
+        for (const u of users as { department?: string }[]) {
+            const d = u.department?.trim();
+            if (d) set.add(d);
+        }
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+    }, [users]);
+
+    const getUserSortValue = useCallback((user: any, col: string) => {
+        switch (col) {
+            case 'name':
+                return `${user.firstName} ${user.lastName}`;
+            case 'email':
+                return user.email ?? '';
+            case 'department':
+                return user.department ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const { sortedRows: sortedUsers, orderBy: userOrderBy, order: userOrder, requestSort: requestUserSort } =
+        useTableSort(filteredUsers, getUserSortValue);
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -137,19 +164,40 @@ const Users: React.FC = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Nom complet</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Département</TableCell>
+                            <SortableTableHeaderCell
+                                columnId="name"
+                                orderBy={userOrderBy}
+                                order={userOrder}
+                                onRequestSort={requestUserSort}
+                            >
+                                Nom complet
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="email"
+                                orderBy={userOrderBy}
+                                order={userOrder}
+                                onRequestSort={requestUserSort}
+                            >
+                                Email
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="department"
+                                orderBy={userOrderBy}
+                                order={userOrder}
+                                onRequestSort={requestUserSort}
+                            >
+                                Département
+                            </SortableTableHeaderCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={4} align="center">Chargement...</TableCell></TableRow>
-                        ) : filteredUsers.length === 0 ? (
+                        ) : sortedUsers.length === 0 ? (
                             <TableRow><TableCell colSpan={4} align="center">Aucun utilisateur trouvé</TableCell></TableRow>
                         ) : (
-                            filteredUsers.map((item: any) => (
+                            sortedUsers.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.firstName} {item.lastName}</TableCell>
                                     <TableCell>{item.email}</TableCell>
@@ -202,13 +250,21 @@ const Users: React.FC = () => {
                                 helperText={formik.touched.email && formik.errors.email as string}
                                 fullWidth
                             />
-                            <TextField
-                                label="Département"
-                                name="department"
-                                value={formik.values.department}
-                                onChange={formik.handleChange}
-                                onBlur={formik.handleBlur}
-                                fullWidth
+                            <Autocomplete
+                                freeSolo
+                                options={departmentOptions}
+                                inputValue={formik.values.department}
+                                onInputChange={(_, newInputValue) => {
+                                    formik.setFieldValue('department', newInputValue);
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Département"
+                                        name="department"
+                                        placeholder="Choisir ou saisir un département"
+                                    />
+                                )}
                             />
                             <TextField
                                 label="Date d'embauche"

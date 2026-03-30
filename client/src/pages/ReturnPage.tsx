@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -31,9 +31,11 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loanApi, accountTypesApi } from '../api/client';
-import type { Loan } from '../types';
+import type { Loan, LoanAccount, LoanItem } from '../types';
 import { Condition } from '../types';
 import ConditionSelector, { conditionLabels, conditionColors } from '../components/ConditionSelector';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
@@ -65,15 +67,10 @@ const ReturnPage: React.FC = () => {
 
     const queryClient = useQueryClient();
 
-    // Debounced search
-    const debouncedSearch = useMemo(() => {
-        let timeout: ReturnType<typeof setTimeout>;
-        return (value: string) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                setSearchQuery(value);
-            }, 300);
-        };
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debouncedSearch = useCallback((value: string) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setSearchQuery(value), 300);
     }, []);
 
     const { data: activeLoans = [], isLoading: isLoadingLoans } = useQuery({
@@ -91,6 +88,78 @@ const ReturnPage: React.FC = () => {
             return response.data;
         },
     });
+
+    const getActiveLoanSortValue = useCallback((loan: Loan, col: string) => {
+        switch (col) {
+            case 'name':
+                return `${loan.user.firstName} ${loan.user.lastName}`;
+            case 'email':
+                return loan.user.email;
+            case 'dept':
+                return loan.user.department ?? '';
+            case 'date':
+                return new Date(loan.checkoutDate).toISOString();
+            case 'count':
+                return loan.items.length;
+            case 'it':
+                return loan.checkoutITStaff;
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedActiveLoans,
+        orderBy: activeOrderBy,
+        order: activeOrder,
+        requestSort: requestActiveSort,
+    } = useTableSort(activeLoans, getActiveLoanSortValue);
+
+    const returnItemRows = selectedLoan?.items ?? [];
+    const getReturnItemSortValue = useCallback((item: LoanItem, col: string) => {
+        switch (col) {
+            case 'equip':
+                return `${item.equipment.type.name} ${item.equipment.brand} ${item.equipment.model}`;
+            case 'cout':
+                return item.conditionOut;
+            case 'cin':
+                return item.conditionIn ?? '';
+            case 'notes':
+                return item.returnNotes ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedReturnItems,
+        orderBy: retItemOrderBy,
+        order: retItemOrder,
+        requestSort: requestRetItemSort,
+    } = useTableSort(returnItemRows, getReturnItemSortValue);
+
+    const openAccountRows = useMemo(
+        () => (selectedLoan?.accounts ?? []).filter((a) => !a.returned),
+        [selectedLoan?.accounts]
+    );
+
+    const getOpenAccountSortValue = useCallback((acc: LoanAccount, col: string) => {
+        switch (col) {
+            case 'type':
+                return acc.accountType?.name ?? '';
+            case 'notes':
+                return acc.returnNotes ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedOpenAccounts,
+        orderBy: accOrderBy,
+        order: accOrder,
+        requestSort: requestAccSort,
+    } = useTableSort(openAccountRows, getOpenAccountSortValue);
 
     const updateAccountsMutation = useMutation({
         mutationFn: ({ loanId, accounts }: { loanId: string; accounts: string[] }) =>
@@ -210,6 +279,37 @@ const ReturnPage: React.FC = () => {
     const returnedAccountsCount = formik.values.accounts.filter((acc) => acc.returned).length;
     const hasSomethingToProcess = returnedItemsCount > 0 || returnedAccountsCount > 0;
 
+    const summaryReturnedItems = useMemo(
+        () => formik.values.items.filter((item) => item.returned),
+        [formik.values.items]
+    );
+
+    const getSummarySortValue = useCallback(
+        (row: ReturnItemFormData, col: string) => {
+            const li = selectedLoan?.items.find((i) => i.id === row.id);
+            switch (col) {
+                case 'equip':
+                    return li
+                        ? `${li.equipment.type.name} ${li.equipment.brand} ${li.equipment.model}`
+                        : '';
+                case 'cond':
+                    return row.conditionIn ?? '';
+                case 'notes':
+                    return row.returnNotes ?? '';
+                default:
+                    return '';
+            }
+        },
+        [selectedLoan?.items]
+    );
+
+    const {
+        sortedRows: sortedSummaryItems,
+        orderBy: sumOrderBy,
+        order: sumOrder,
+        requestSort: requestSumSort,
+    } = useTableSort(summaryReturnedItems, getSummarySortValue);
+
     return (
         <Container maxWidth={false} sx={{ py: 4 }}>
             <Typography variant="h4" gutterBottom>
@@ -273,7 +373,7 @@ const ReturnPage: React.FC = () => {
             {!selectedLoan && activeLoans.length > 0 && (
                 <Paper sx={{ p: 3, mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                        Prêts actifs trouvés ({activeLoans.length})
+                        Prêts actifs trouvés ({sortedActiveLoans.length})
                     </Typography>
                     <Divider sx={{ mb: 3 }} />
 
@@ -281,16 +381,58 @@ const ReturnPage: React.FC = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Nom</TableCell>
-                                    <TableCell>Email</TableCell>
-                                    <TableCell>Département</TableCell>
-                                    <TableCell>Date de prêt</TableCell>
-                                    <TableCell>Équipements</TableCell>
-                                    <TableCell>Personnel informatique</TableCell>
+                                    <SortableTableHeaderCell
+                                        columnId="name"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Nom
+                                    </SortableTableHeaderCell>
+                                    <SortableTableHeaderCell
+                                        columnId="email"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Email
+                                    </SortableTableHeaderCell>
+                                    <SortableTableHeaderCell
+                                        columnId="dept"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Département
+                                    </SortableTableHeaderCell>
+                                    <SortableTableHeaderCell
+                                        columnId="date"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Date de prêt
+                                    </SortableTableHeaderCell>
+                                    <SortableTableHeaderCell
+                                        columnId="count"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Équipements
+                                    </SortableTableHeaderCell>
+                                    <SortableTableHeaderCell
+                                        columnId="it"
+                                        orderBy={activeOrderBy}
+                                        order={activeOrder}
+                                        onRequestSort={requestActiveSort}
+                                    >
+                                        Personnel informatique
+                                    </SortableTableHeaderCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {activeLoans.map((loan: Loan) => (
+                                {sortedActiveLoans.map((loan: Loan) => (
                                     <TableRow
                                         key={loan.id}
                                         hover
@@ -365,14 +507,42 @@ const ReturnPage: React.FC = () => {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>Retourné</TableCell>
-                                        <TableCell>Équipement</TableCell>
-                                        <TableCell>État au prêt</TableCell>
-                                        <TableCell>État au retour</TableCell>
-                                        <TableCell>Notes</TableCell>
+                                        <SortableTableHeaderCell
+                                            columnId="equip"
+                                            orderBy={retItemOrderBy}
+                                            order={retItemOrder}
+                                            onRequestSort={requestRetItemSort}
+                                        >
+                                            Équipement
+                                        </SortableTableHeaderCell>
+                                        <SortableTableHeaderCell
+                                            columnId="cout"
+                                            orderBy={retItemOrderBy}
+                                            order={retItemOrder}
+                                            onRequestSort={requestRetItemSort}
+                                        >
+                                            État au prêt
+                                        </SortableTableHeaderCell>
+                                        <SortableTableHeaderCell
+                                            columnId="cin"
+                                            orderBy={retItemOrderBy}
+                                            order={retItemOrder}
+                                            onRequestSort={requestRetItemSort}
+                                        >
+                                            État au retour
+                                        </SortableTableHeaderCell>
+                                        <SortableTableHeaderCell
+                                            columnId="notes"
+                                            orderBy={retItemOrderBy}
+                                            order={retItemOrder}
+                                            onRequestSort={requestRetItemSort}
+                                        >
+                                            Notes
+                                        </SortableTableHeaderCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {selectedLoan.items.map((item, index) => {
+                                    {sortedReturnItems.map((item, index) => {
                                         const formItem = formik.values.items.find(
                                             (fi) => fi.id === item.id
                                         );
@@ -544,18 +714,32 @@ const ReturnPage: React.FC = () => {
                                 </Box>
                                 <Divider sx={{ mb: 2 }} />
 
-                                {selectedLoan.accounts?.filter((a: any) => !a.returned).length > 0 && (
+                                {sortedOpenAccounts.length > 0 && (
                                     <TableContainer>
                                         <Table>
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell>Désactiver</TableCell>
-                                                    <TableCell>Type de compte</TableCell>
-                                                    <TableCell>Notes</TableCell>
+                                                    <SortableTableHeaderCell
+                                                        columnId="type"
+                                                        orderBy={accOrderBy}
+                                                        order={accOrder}
+                                                        onRequestSort={requestAccSort}
+                                                    >
+                                                        Type de compte
+                                                    </SortableTableHeaderCell>
+                                                    <SortableTableHeaderCell
+                                                        columnId="notes"
+                                                        orderBy={accOrderBy}
+                                                        order={accOrder}
+                                                        onRequestSort={requestAccSort}
+                                                    >
+                                                        Notes
+                                                    </SortableTableHeaderCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
-                                                {selectedLoan.accounts?.filter((a: any) => !a.returned).map((acc: any) => {
+                                                {sortedOpenAccounts.map((acc: any) => {
                                                     const formAcc = formik.values.accounts.find(
                                                         (fa) => fa.id === acc.id
                                                     );
@@ -646,15 +830,34 @@ const ReturnPage: React.FC = () => {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Équipement</TableCell>
-                                            <TableCell>État au retour</TableCell>
-                                            <TableCell>Notes</TableCell>
+                                            <SortableTableHeaderCell
+                                                columnId="equip"
+                                                orderBy={sumOrderBy}
+                                                order={sumOrder}
+                                                onRequestSort={requestSumSort}
+                                            >
+                                                Équipement
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="cond"
+                                                orderBy={sumOrderBy}
+                                                order={sumOrder}
+                                                onRequestSort={requestSumSort}
+                                            >
+                                                État au retour
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="notes"
+                                                orderBy={sumOrderBy}
+                                                order={sumOrder}
+                                                onRequestSort={requestSumSort}
+                                            >
+                                                Notes
+                                            </SortableTableHeaderCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {formik.values.items
-                                            .filter((item) => item.returned)
-                                            .map((item) => {
+                                        {sortedSummaryItems.map((item) => {
                                                 const loanItem = selectedLoan.items.find(
                                                     (li) => li.id === item.id
                                                 );
@@ -678,8 +881,15 @@ const ReturnPage: React.FC = () => {
                                                             </Typography>
                                                         </TableCell>
                                                         <TableCell>
-                                                            {item.conditionIn &&
-                                                                conditionLabels[item.conditionIn]}
+                                                            {item.conditionIn ? (
+                                                                <Chip
+                                                                    label={conditionLabels[item.conditionIn]}
+                                                                    size="small"
+                                                                    color={conditionColors[item.conditionIn]}
+                                                                />
+                                                            ) : (
+                                                                '-'
+                                                            )}
                                                         </TableCell>
                                                         <TableCell>{item.returnNotes || '-'}</TableCell>
                                                     </TableRow>

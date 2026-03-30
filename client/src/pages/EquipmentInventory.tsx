@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -38,6 +38,8 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Condition, EquipmentStatus } from '../types';
 import { conditionLabels, conditionColors } from '../components/ConditionSelector';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
 
 const EquipmentInventory: React.FC = () => {
     const [openEquipmentDialog, setOpenEquipmentDialog] = React.useState(false);
@@ -239,6 +241,36 @@ const EquipmentInventory: React.FC = () => {
         });
     }, [equipment, search]);
 
+    const getEquipmentSortValue = useCallback((item: any, col: string) => {
+        switch (col) {
+            case 'type':
+                return item.type?.name ?? '';
+            case 'brand':
+                return item.brand ?? '';
+            case 'model':
+                return item.model ?? '';
+            case 'serial':
+                return item.serialNumber ?? '';
+            case 'serviceTag':
+                return item.serviceTag ?? '';
+            case 'comments':
+                return item.comments ?? '';
+            case 'status':
+                return getStatusLabel(item?.currentStatus);
+            case 'condition':
+                return conditionLabels[item.condition as Condition] ?? String(item.condition ?? '');
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedEquipment,
+        orderBy: equipOrderBy,
+        order: equipOrder,
+        requestSort: requestEquipSort,
+    } = useTableSort(filteredEquipment, getEquipmentSortValue);
+
     return (
         <Box>
             <Box
@@ -300,7 +332,7 @@ const EquipmentInventory: React.FC = () => {
                     }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    {filteredEquipment.length} résultat{filteredEquipment.length > 1 ? 's' : ''} (sur {equipment.length})
+                    {sortedEquipment.length} résultat{sortedEquipment.length > 1 ? 's' : ''} (sur {equipment.length})
                 </Typography>
             </Paper>
 
@@ -308,34 +340,90 @@ const EquipmentInventory: React.FC = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Type</TableCell>
-                            <TableCell>Marque</TableCell>
-                            <TableCell>Modèle</TableCell>
-                            <TableCell>Numéro d'inventaire</TableCell>
-                            <TableCell>Service Tag</TableCell>
-                            <TableCell>Commentaires</TableCell>
-                            <TableCell>Statut</TableCell>
-                            <TableCell>État</TableCell>
+                            <SortableTableHeaderCell
+                                columnId="type"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Type
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="brand"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Marque
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="model"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Modèle
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="serial"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Numéro d'inventaire
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="serviceTag"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Service Tag
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="comments"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Commentaires
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="status"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Statut
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="condition"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                État
+                            </SortableTableHeaderCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={9} align="center">
                                     Chargement...
                                 </TableCell>
                             </TableRow>
-                        ) : filteredEquipment.length === 0 ? (
+                        ) : sortedEquipment.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={9} align="center">
                                     {equipment.length === 0
                                         ? 'Aucun équipement trouvé'
                                         : 'Aucun résultat pour cette recherche'}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredEquipment.map((item: any) => (
+                            sortedEquipment.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.type.name}</TableCell>
                                     <TableCell>{item.brand}</TableCell>

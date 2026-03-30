@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Box,
     Typography,
@@ -48,7 +48,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { loanApi, equipmentApi, usersApi, accountTypesApi } from '../api/client';
 import { Condition } from '../types';
-import ConditionSelector from '../components/ConditionSelector';
+import ConditionSelector, { conditionLabels } from '../components/ConditionSelector';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
 
 // Brand options
 const BRANDS = [
@@ -184,6 +186,32 @@ const CheckoutPage: React.FC = () => {
             }),
         [availableEquipment, equipmentSearch]
     );
+
+    const getAvailableEquipSortValue = useCallback((eq: any, col: string) => {
+        switch (col) {
+            case 'type':
+                return eq.type?.name ?? '';
+            case 'brand':
+                return eq.brand ?? '';
+            case 'model':
+                return eq.model ?? '';
+            case 'serial':
+                return eq.serialNumber ?? '';
+            case 'tag':
+                return eq.serviceTag ?? '';
+            case 'condition':
+                return conditionLabels[eq.condition as Condition] ?? String(eq.condition ?? '');
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedAvailableEquipment,
+        orderBy: availOrderBy,
+        order: availOrder,
+        requestSort: requestAvailSort,
+    } = useTableSort(filteredAvailableEquipment, getAvailableEquipSortValue);
 
     const { data: equipmentTypes = [] } = useQuery({
         queryKey: ['equipment-types'],
@@ -619,7 +647,7 @@ Date: ${agreementDate}`;
                                 />
                             </Box>
                             <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
-                                Équipements disponibles ({filteredAvailableEquipment.length}
+                                Équipements disponibles ({sortedAvailableEquipment.length}
                                 {equipmentSearch
                                     ? ` sur ${availableEquipment.length}`
                                     : ''})
@@ -629,16 +657,58 @@ Date: ${agreementDate}`;
                                     <TableHead>
                                         <TableRow>
                                             <TableCell padding="checkbox" />
-                                            <TableCell>Type</TableCell>
-                                            <TableCell>Marque</TableCell>
-                                            <TableCell>Modèle</TableCell>
-                                            <TableCell>Numéro d'inventaire</TableCell>
-                                            <TableCell>Service Tag</TableCell>
-                                            <TableCell>État</TableCell>
+                                            <SortableTableHeaderCell
+                                                columnId="type"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                Type
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="brand"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                Marque
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="model"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                Modèle
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="serial"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                Numéro d'inventaire
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="tag"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                Service Tag
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="condition"
+                                                orderBy={availOrderBy}
+                                                order={availOrder}
+                                                onRequestSort={requestAvailSort}
+                                            >
+                                                État
+                                            </SortableTableHeaderCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredAvailableEquipment.length === 0 ? (
+                                        {sortedAvailableEquipment.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={7} align="center">
                                                     <Typography variant="body2" color="text.secondary">
@@ -647,7 +717,7 @@ Date: ${agreementDate}`;
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            filteredAvailableEquipment.map((eq: any) => {
+                                            sortedAvailableEquipment.map((eq: any) => {
                                                 const isSelected = formik.values.equipment.some(
                                                     (item) => item.equipmentId === eq.id
                                                 );

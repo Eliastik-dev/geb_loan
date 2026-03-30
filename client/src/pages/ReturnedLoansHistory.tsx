@@ -26,7 +26,10 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { loanApi } from '../api/client';
-import type { Loan } from '../types';
+import type { Loan, LoanAccount, LoanItem } from '../types';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
+import ConditionChip from '../components/ConditionChip';
 
 const ReturnedLoansHistory: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +54,86 @@ const ReturnedLoansHistory: React.FC = () => {
         },
         retry: false,
     });
+
+    const getReturnedLoanSortValue = useCallback((loan: Loan, col: string) => {
+        switch (col) {
+            case 'collab':
+                return `${loan.user.firstName} ${loan.user.lastName}`;
+            case 'email':
+                return loan.user.email;
+            case 'dept':
+                return loan.user.department ?? '';
+            case 'checkout':
+                return new Date(loan.checkoutDate).toISOString();
+            case 'return':
+                return loan.returnDate ? new Date(loan.returnDate).toISOString() : '';
+            case 'count':
+                return loan.items.length;
+            case 'itout':
+                return loan.checkoutITStaff;
+            case 'itin':
+                return loan.returnITStaff ?? '';
+            case 'status':
+                return loan.status;
+            default:
+                return '';
+        }
+    }, []);
+
+    const getModalItemSortValue = useCallback((item: LoanItem, col: string) => {
+        switch (col) {
+            case 'equip':
+                return `${item.equipment.type.name} ${item.equipment.brand} ${item.equipment.model}`;
+            case 'serial':
+                return item.equipment.serialNumber;
+            case 'tag':
+                return item.equipment.serviceTag ?? '';
+            case 'out':
+                return item.conditionOut;
+            case 'in':
+                return item.conditionIn ?? '';
+            case 'notes':
+                return item.returnNotes ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const getModalAccountSortValue = useCallback((acc: LoanAccount, col: string) => {
+        switch (col) {
+            case 'type':
+                return acc.accountType?.name ?? '';
+            case 'status':
+                return acc.returned ? 'Désactivé' : 'Actif';
+            case 'notes':
+                return acc.returnNotes ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const {
+        sortedRows: sortedReturnedLoans,
+        orderBy: loanOrderBy,
+        order: loanOrder,
+        requestSort: requestLoanSort,
+    } = useTableSort(returnedLoans, getReturnedLoanSortValue);
+
+    const modalItems = selectedLoan?.items ?? [];
+    const {
+        sortedRows: sortedModalItems,
+        orderBy: itemOrderBy,
+        order: itemOrder,
+        requestSort: requestItemSort,
+    } = useTableSort(modalItems, getModalItemSortValue);
+
+    const modalAccounts = selectedLoan?.accounts ?? [];
+    const {
+        sortedRows: sortedModalAccounts,
+        orderBy: accOrderBy,
+        order: accOrder,
+        requestSort: requestAccSort,
+    } = useTableSort(modalAccounts, getModalAccountSortValue);
 
     return (
         <Container maxWidth={false} sx={{ py: 4 }}>
@@ -99,19 +182,82 @@ const ReturnedLoansHistory: React.FC = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Collaborateur</TableCell>
-                                <TableCell>Email</TableCell>
-                                <TableCell>Département</TableCell>
-                                <TableCell>Date de prêt</TableCell>
-                                <TableCell>Date de retour</TableCell>
-                                <TableCell>Équipements</TableCell>
-                                <TableCell>IT prêt</TableCell>
-                                <TableCell>IT retour</TableCell>
-                                <TableCell>Statut</TableCell>
+                                <SortableTableHeaderCell
+                                    columnId="collab"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Collaborateur
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="email"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Email
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="dept"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Département
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="checkout"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Date de prêt
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="return"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Date de retour
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="count"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Équipements
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="itout"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    IT prêt
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="itin"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    IT retour
+                                </SortableTableHeaderCell>
+                                <SortableTableHeaderCell
+                                    columnId="status"
+                                    orderBy={loanOrderBy}
+                                    order={loanOrder}
+                                    onRequestSort={requestLoanSort}
+                                >
+                                    Statut
+                                </SortableTableHeaderCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {returnedLoans.map((loan) => (
+                            {sortedReturnedLoans.map((loan) => (
                                 <TableRow
                                     key={loan.id}
                                     hover
@@ -238,16 +384,58 @@ const ReturnedLoansHistory: React.FC = () => {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Équipement</TableCell>
-                                            <TableCell>Numéro d'inventaire</TableCell>
-                                            <TableCell>Service Tag</TableCell>
-                                            <TableCell>État au prêt</TableCell>
-                                            <TableCell>État au retour</TableCell>
-                                            <TableCell>Notes retour</TableCell>
+                                            <SortableTableHeaderCell
+                                                columnId="equip"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                Équipement
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="serial"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                Numéro d'inventaire
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="tag"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                Service Tag
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="out"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                État au prêt
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="in"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                État au retour
+                                            </SortableTableHeaderCell>
+                                            <SortableTableHeaderCell
+                                                columnId="notes"
+                                                orderBy={itemOrderBy}
+                                                order={itemOrder}
+                                                onRequestSort={requestItemSort}
+                                            >
+                                                Notes retour
+                                            </SortableTableHeaderCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {selectedLoan.items.map((item) => (
+                                        {sortedModalItems.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>
                                                     <Typography variant="body2" fontWeight="medium">
@@ -267,9 +455,14 @@ const ReturnedLoansHistory: React.FC = () => {
                                                 <TableCell>
                                                     {item.equipment.serviceTag || '—'}
                                                 </TableCell>
-                                                <TableCell>{item.conditionOut}</TableCell>
                                                 <TableCell>
-                                                    {item.conditionIn || 'Non renseigné'}
+                                                    <ConditionChip value={item.conditionOut} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <ConditionChip
+                                                        value={item.conditionIn}
+                                                        emptyLabel="Non renseigné"
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
                                                     {item.returnNotes || '—'}
@@ -290,13 +483,34 @@ const ReturnedLoansHistory: React.FC = () => {
                                         <Table size="small">
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell>Type de compte</TableCell>
-                                                    <TableCell>Statut</TableCell>
-                                                    <TableCell>Notes de retour</TableCell>
+                                                    <SortableTableHeaderCell
+                                                        columnId="type"
+                                                        orderBy={accOrderBy}
+                                                        order={accOrder}
+                                                        onRequestSort={requestAccSort}
+                                                    >
+                                                        Type de compte
+                                                    </SortableTableHeaderCell>
+                                                    <SortableTableHeaderCell
+                                                        columnId="status"
+                                                        orderBy={accOrderBy}
+                                                        order={accOrder}
+                                                        onRequestSort={requestAccSort}
+                                                    >
+                                                        Statut
+                                                    </SortableTableHeaderCell>
+                                                    <SortableTableHeaderCell
+                                                        columnId="notes"
+                                                        orderBy={accOrderBy}
+                                                        order={accOrder}
+                                                        onRequestSort={requestAccSort}
+                                                    >
+                                                        Notes de retour
+                                                    </SortableTableHeaderCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
-                                                {selectedLoan.accounts.map((acc) => (
+                                                {sortedModalAccounts.map((acc) => (
                                                     <TableRow key={acc.id}>
                                                         <TableCell>
                                                             {acc.accountType?.name || 'Inconnu'}

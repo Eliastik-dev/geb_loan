@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton
@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountTypesApi } from '../api/client';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { useTableSort } from '../hooks/useTableSort';
+import SortableTableHeaderCell from '../components/SortableTableHeaderCell';
 
 const AccountTypes: React.FC = () => {
     const [openDialog, setOpenDialog] = React.useState(false);
@@ -83,6 +85,20 @@ const AccountTypes: React.FC = () => {
         formik.resetForm();
     };
 
+    const getAccountTypeSortValue = useCallback((row: any, col: string) => {
+        switch (col) {
+            case 'name':
+                return row.name ?? '';
+            case 'description':
+                return row.description ?? '';
+            default:
+                return '';
+        }
+    }, []);
+
+    const { sortedRows: sortedAccountTypes, orderBy: atOrderBy, order: atOrder, requestSort: requestAtSort } =
+        useTableSort(accountTypes, getAccountTypeSortValue);
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -96,18 +112,32 @@ const AccountTypes: React.FC = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Nom</TableCell>
-                            <TableCell>Description</TableCell>
+                            <SortableTableHeaderCell
+                                columnId="name"
+                                orderBy={atOrderBy}
+                                order={atOrder}
+                                onRequestSort={requestAtSort}
+                            >
+                                Nom
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
+                                columnId="description"
+                                orderBy={atOrderBy}
+                                order={atOrder}
+                                onRequestSort={requestAtSort}
+                            >
+                                Description
+                            </SortableTableHeaderCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={3} align="center">Chargement...</TableCell></TableRow>
-                        ) : accountTypes.length === 0 ? (
+                        ) : sortedAccountTypes.length === 0 ? (
                             <TableRow><TableCell colSpan={3} align="center">Aucun type de compte trouvé</TableCell></TableRow>
                         ) : (
-                            accountTypes.map((item: any) => (
+                            sortedAccountTypes.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.description}</TableCell>

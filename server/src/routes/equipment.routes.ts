@@ -56,10 +56,51 @@ router.get('/available', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
     try {
         const equipment = await prisma.equipment.findMany({
-            include: { type: true },
+            include: {
+                type: true,
+                loans: {
+                    where: {
+                        returned: false,
+                        loan: {
+                            status: 'ACTIVE',
+                            checkoutValidated: true,
+                        },
+                    },
+                    include: {
+                        loan: {
+                            include: {
+                                user: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                    take: 1,
+                },
+            },
             orderBy: { createdAt: 'desc' },
         });
-        res.json(equipment);
+        const equipmentWithBorrower = equipment.map((item) => {
+            const activeLoanItem = item.loans[0];
+            const borrower = activeLoanItem?.loan?.user;
+
+            return {
+                ...item,
+                currentBorrower: borrower
+                    ? {
+                          id: borrower.id,
+                          firstName: borrower.firstName,
+                          lastName: borrower.lastName,
+                          email: borrower.email,
+                          department: borrower.department,
+                      }
+                    : null,
+                loans: undefined,
+            };
+        });
+
+        res.json(equipmentWithBorrower);
     } catch (error) {
         console.error('Error fetching equipment:', error);
         res.status(500).json({ error: 'Failed to fetch equipment' });

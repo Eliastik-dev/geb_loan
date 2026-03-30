@@ -230,6 +230,10 @@ const EquipmentInventory: React.FC = () => {
                 item?.model,
                 item?.serialNumber,
                 item?.serviceTag,
+                item?.currentBorrower
+                    ? `${item.currentBorrower.firstName} ${item.currentBorrower.lastName}`
+                    : '',
+                item?.currentBorrower?.email,
                 getStatusLabel(item?.currentStatus),
                 item?.currentStatus,
             ]
@@ -259,6 +263,10 @@ const EquipmentInventory: React.FC = () => {
                 return getStatusLabel(item?.currentStatus);
             case 'condition':
                 return conditionLabels[item.condition as Condition] ?? String(item.condition ?? '');
+            case 'borrower':
+                return item.currentBorrower
+                    ? `${item.currentBorrower.firstName} ${item.currentBorrower.lastName}`
+                    : '';
             default:
                 return '';
         }
@@ -397,6 +405,14 @@ const EquipmentInventory: React.FC = () => {
                                 Statut
                             </SortableTableHeaderCell>
                             <SortableTableHeaderCell
+                                columnId="borrower"
+                                orderBy={equipOrderBy}
+                                order={equipOrder}
+                                onRequestSort={requestEquipSort}
+                            >
+                                Utilisateur en prêt
+                            </SortableTableHeaderCell>
+                            <SortableTableHeaderCell
                                 columnId="condition"
                                 orderBy={equipOrderBy}
                                 order={equipOrder}
@@ -410,13 +426,13 @@ const EquipmentInventory: React.FC = () => {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={10} align="center">
                                     Chargement...
                                 </TableCell>
                             </TableRow>
                         ) : sortedEquipment.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={10} align="center">
                                     {equipment.length === 0
                                         ? 'Aucun équipement trouvé'
                                         : 'Aucun résultat pour cette recherche'}
@@ -441,6 +457,22 @@ const EquipmentInventory: React.FC = () => {
                                             color={getStatusColor(item.currentStatus)}
                                             size="small"
                                         />
+                                    </TableCell>
+                                    <TableCell>
+                                        {item.currentStatus === EquipmentStatus.ON_LOAN &&
+                                        item.currentBorrower ? (
+                                            <Box>
+                                                <Typography variant="body2" fontWeight="medium">
+                                                    {item.currentBorrower.firstName}{' '}
+                                                    {item.currentBorrower.lastName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {item.currentBorrower.email}
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            '—'
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         <Chip

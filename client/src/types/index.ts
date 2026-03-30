@@ -50,6 +50,7 @@ export interface Equipment {
     currentStatus: EquipmentStatus;
     condition: Condition;
     comments?: string;
+    currentBorrower?: User | null;
 }
 
 export interface LoanItem {

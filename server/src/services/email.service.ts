@@ -29,6 +29,8 @@ const allowSelfSigned =
     process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ||
     process.env.SMTP_REJECT_UNAUTHORIZED === 'false';
 
+const itNotificationEmail = process.env.IT_NOTIFICATION_EMAIL || 'informatique@geb.fr';
+
 const transporter = nodemailer.createTransport({
     host: emailConfig.host,
     port: emailConfig.port,
@@ -41,6 +43,7 @@ const transporter = nodemailer.createTransport({
 
 export interface EmailOptions {
     to: string;
+    cc?: string;
     subject: string;
     text: string;
     html?: string;
@@ -60,6 +63,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
             from: emailConfig.from,
             replyTo: emailConfig.replyTo,
             to: options.to,
+            cc: options.cc,
             subject: options.subject,
             text: options.text,
             html: options.html || options.text,
@@ -70,6 +74,9 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
         if (isDevelopment && !forceEmailSend) {
             console.log('\n📧 Email Preview (not sent in development):');
             console.log(`To: ${options.to}`);
+            if (options.cc) {
+                console.log(`Cc: ${options.cc}`);
+            }
             console.log(`Subject: ${options.subject}`);
             console.log(`Body:\n${options.text}`);
             if (options.attachments && options.attachments.length > 0) {
@@ -80,7 +87,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
         }
 
         await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${options.to}`);
+        console.log(`Email sent to ${options.to}${options.cc ? ` (cc: ${options.cc})` : ''}`);
     } catch (error) {
         console.error('Error sending email:', error);
         throw error;
@@ -219,8 +226,14 @@ hfannir@geb.fr
     const pdfBuffer = await generatePDF(pdfData);
     const fileName = `confirmation_pret_${collaboratorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
 
+    const cc =
+        collaboratorEmail.trim().toLowerCase() === itNotificationEmail.trim().toLowerCase()
+            ? undefined
+            : itNotificationEmail;
+
     await sendEmail({
         to: collaboratorEmail,
+        cc,
         subject,
         text,
         html,

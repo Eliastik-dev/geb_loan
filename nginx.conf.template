@@ -1,0 +1,62 @@
+# GEB Equipment Loan — Nginx (HTTP interne)
+#
+# Installé automatiquement par ./deploy_ubuntu.sh, ou manuellement :
+#   sudo cp nginx.conf.generated /etc/nginx/sites-available/materiel
+#   sudo ln -sfn /etc/nginx/sites-available/materiel /etc/nginx/sites-enabled/materiel
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Placeholders (remplacés par deploy_ubuntu.sh) :
+#   __SERVER_NAME__   — ex. materiel.pn2.geb (APP_URL ou SERVER_NAME dans server/.env)
+#   __NGINX_PORT__    — port HTTP public (défaut 80, NGINX_PORT dans server/.env)
+#   __DEPLOY_ROOT__   — chemin absolu du dépôt
+#   __BACKEND_PORT__  — PORT dans server/.env (défaut 3000)
+
+server {
+    listen __NGINX_PORT__;
+    server_name __SERVER_NAME__;
+
+    root __DEPLOY_ROOT__/client/dist;
+    index index.html;
+
+    client_max_body_size 10m;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "same-origin" always;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    # API Express (PM2) — l'URI complète est transmise (/api/...)
+    location /api/ {
+        proxy_pass http://127.0.0.1:__BACKEND_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+        try_files $uri =204;
+    }
+
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    access_log /var/log/nginx/materiel-access.log;
+    error_log  /var/log/nginx/materiel-error.log warn;
+}

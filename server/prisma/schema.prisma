@@ -11,7 +11,7 @@ datasource db {
 }
 
 model User {
-  id          Int       @id @default(autoincrement())
+  id            String    @id @default(cuid())
   email         String    @unique
   lastName      String
   firstName     String
@@ -47,7 +47,7 @@ model Equipment {
 
 model Loan {
   id                String     @id @default(cuid())
-  userId            Int
+  userId            String
   user              User       @relation(fields: [userId], references: [id])
   validationCode    String
   checkoutDate      DateTime   @default(now())

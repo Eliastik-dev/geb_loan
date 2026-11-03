@@ -1,5 +1,17 @@
 import React from 'react';
-import { Box, Typography, Paper, Grid, Card, CardContent } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Paper,
+    Grid,
+    Card,
+    CardContent,
+    List,
+    ListItem,
+    ListItemText,
+    Chip,
+    CircularProgress,
+} from '@mui/material';
 import {
     Inventory,
     Assignment,
@@ -9,8 +21,34 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { statsApi } from '../api/client';
 
+interface RecentActivity {
+    id: string;
+    type: 'CHECKOUT' | 'RETURN';
+    occurredAt: string;
+    collaboratorName: string;
+    department: string | null;
+    itStaff: string;
+    equipmentLabel: string;
+    equipmentCount: number;
+}
+
+const activityLabels: Record<RecentActivity['type'], string> = {
+    CHECKOUT: 'Sortie',
+    RETURN: 'Retour',
+};
+
+function formatActivityDate(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    });
+}
+
 const Dashboard: React.FC = () => {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const response = await statsApi.getOverview();
@@ -19,6 +57,7 @@ const Dashboard: React.FC = () => {
                 activeLoans: number;
                 returnsThisMonth: number;
                 pendingValidations: number;
+                recentActivity: RecentActivity[];
             };
         },
         refetchInterval: 30000,
@@ -30,6 +69,8 @@ const Dashboard: React.FC = () => {
         returnsThisMonth: data?.returnsThisMonth ?? 0,
         pendingValidations: data?.pendingValidations ?? 0,
     };
+
+    const recentActivity = data?.recentActivity ?? [];
 
     return (
         <Box>
@@ -115,9 +156,59 @@ const Dashboard: React.FC = () => {
                         <Typography variant="h6" gutterBottom>
                             Activité récente
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Aucune activité récente
-                        </Typography>
+                        {isLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                <CircularProgress size={24} />
+                            </Box>
+                        ) : isError ? (
+                            <Typography variant="body2" color="error">
+                                Impossible de charger l&apos;activité récente
+                            </Typography>
+                        ) : recentActivity.length === 0 ? (
+                            <Typography variant="body2" color="text.secondary">
+                                Aucune activité récente
+                            </Typography>
+                        ) : (
+                            <List disablePadding>
+                                {recentActivity.map((activity, index) => (
+                                    <ListItem
+                                        key={activity.id}
+                                        disableGutters
+                                        divider={index < recentActivity.length - 1}
+                                        sx={{ py: 1.25, alignItems: 'flex-start' }}
+                                    >
+                                        <ListItemText
+                                            primary={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                                    <Chip
+                                                        size="small"
+                                                        label={activityLabels[activity.type]}
+                                                        color={activity.type === 'CHECKOUT' ? 'warning' : 'success'}
+                                                    />
+                                                    <Typography component="span" variant="body1">
+                                                        {activity.collaboratorName}
+                                                    </Typography>
+                                                    {activity.department ? (
+                                                        <Typography component="span" variant="body2" color="text.secondary">
+                                                            {activity.department}
+                                                        </Typography>
+                                                    ) : null}
+                                                </Box>
+                                            }
+                                            secondary={
+                                                [
+                                                    activity.equipmentLabel,
+                                                    formatActivityDate(activity.occurredAt),
+                                                    activity.itStaff ? `IT : ${activity.itStaff}` : null,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')
+                                            }
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        )}
                     </Paper>
                 </Grid>
             </Grid>
